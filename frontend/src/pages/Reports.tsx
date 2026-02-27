@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { FileText, Calendar } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { reportsApi } from '@/api'
 
 interface Report {
@@ -46,7 +48,7 @@ export default function Reports() {
         <select
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
-          className="px-3 py-2 rounded-lg border border-border text-sm bg-white"
+          className="px-3 py-2 rounded-lg border border-border text-sm"
         >
           <option value="">全部</option>
           <option value="morning">早报</option>
@@ -60,7 +62,7 @@ export default function Reports() {
         <div className="bg-card rounded-xl p-12 text-center border border-border">
           <FileText size={48} className="mx-auto text-text-secondary/30 mb-4" />
           <p className="text-text-secondary">暂无日报</p>
-          <p className="text-xs text-text-secondary mt-1">系统会在每日 07:30 和 22:00 自动生成市场日报</p>
+          <p className="text-xs text-text-secondary mt-1">系统会在每日 07:30 和 22:00 自动生成市场日报（需配置 AI API Key）</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -96,8 +98,10 @@ export default function Reports() {
                     生成时间: {new Date(selected.created_at).toLocaleString('zh-CN')}
                   </p>
                 </div>
-                <div className="p-5 prose prose-sm max-w-none overflow-auto max-h-[65vh]">
-                  <MarkdownContent content={selected.content} />
+                <div className="p-5 overflow-auto max-h-[65vh] markdown-body">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {selected.content}
+                  </ReactMarkdown>
                 </div>
               </>
             ) : (
@@ -108,27 +112,4 @@ export default function Reports() {
       )}
     </div>
   )
-}
-
-function MarkdownContent({ content }: { content: string }) {
-  const lines = content.split('\n')
-  const elements: React.ReactNode[] = []
-
-  lines.forEach((line, i) => {
-    if (line.startsWith('## ')) {
-      elements.push(<h2 key={i} className="text-lg font-bold mt-4 mb-2">{line.slice(3)}</h2>)
-    } else if (line.startsWith('### ')) {
-      elements.push(<h3 key={i} className="text-base font-semibold mt-3 mb-1">{line.slice(4)}</h3>)
-    } else if (line.startsWith('- ')) {
-      elements.push(<li key={i} className="ml-4 text-sm mb-1">{line.slice(2)}</li>)
-    } else if (line.startsWith('**') && line.endsWith('**')) {
-      elements.push(<p key={i} className="font-semibold text-sm mt-2">{line.slice(2, -2)}</p>)
-    } else if (line.trim()) {
-      elements.push(<p key={i} className="text-sm mb-2 leading-relaxed">{line}</p>)
-    } else {
-      elements.push(<div key={i} className="h-2" />)
-    }
-  })
-
-  return <div>{elements}</div>
 }

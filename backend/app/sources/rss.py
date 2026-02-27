@@ -10,6 +10,7 @@ from app.sources.base import NewsSource, NewsItem
 logger = logging.getLogger(__name__)
 
 DEFAULT_RSS_FEEDS = [
+    # --- 中文财经 ---
     {
         "name": "新浪财经",
         "url": "https://finance.sina.com.cn/rss/economy.xml",
@@ -26,6 +27,22 @@ DEFAULT_RSS_FEEDS = [
         "category": "tech",
     },
     {
+        "name": "金十数据",
+        "url": "https://rsshub.app/jin10",
+        "category": "global",
+    },
+    {
+        "name": "东方财富",
+        "url": "https://rsshub.app/eastmoney/report/stock",
+        "category": "a_stock",
+    },
+    {
+        "name": "FT中文网",
+        "url": "https://rsshub.app/ft/chinese/hotstoryby7day",
+        "category": "global",
+    },
+    # --- 国际财经 ---
+    {
         "name": "CoinDesk",
         "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
         "category": "crypto",
@@ -34,6 +51,36 @@ DEFAULT_RSS_FEEDS = [
         "name": "Reuters Business",
         "url": "https://www.reutersagency.com/feed/?best-topics=business-finance",
         "category": "global",
+    },
+    {
+        "name": "CNBC",
+        "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
+        "category": "global",
+    },
+    {
+        "name": "Bloomberg",
+        "url": "https://rsshub.app/bloomberg/markets",
+        "category": "global",
+    },
+    {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/",
+        "category": "tech",
+    },
+    {
+        "name": "The Block",
+        "url": "https://www.theblock.co/rss.xml",
+        "category": "crypto",
+    },
+    {
+        "name": "SEC Filings",
+        "url": "https://rsshub.app/sec/latest",
+        "category": "a_stock",
+    },
+    {
+        "name": "Hacker News",
+        "url": "https://hnrss.org/frontpage",
+        "category": "tech",
     },
 ]
 

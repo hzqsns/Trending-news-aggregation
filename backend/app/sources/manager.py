@@ -11,12 +11,14 @@ from app.models.setting import SystemSetting
 from app.sources.base import NewsItem, NewsSource
 from app.sources.rss import RSSSource
 from app.sources.crypto import CryptoSource
+from app.sources.newsapi import NewsAPISource
 
 logger = logging.getLogger(__name__)
 
 ALL_SOURCES: list[NewsSource] = [
     RSSSource(),
     CryptoSource(),
+    NewsAPISource(),
 ]
 
 
@@ -32,8 +34,9 @@ async def _is_source_enabled(session: AsyncSession, key: str) -> bool:
     return setting.value == "true"
 
 
-async def _save_items(session: AsyncSession, items: list[NewsItem]) -> int:
+async def _save_items(session: AsyncSession, items: list[NewsItem]) -> tuple[int, list[dict]]:
     saved = 0
+    new_articles: list[dict] = []
     for item in items:
         if not item.title or not item.url:
             continue
@@ -60,7 +63,12 @@ async def _save_items(session: AsyncSession, items: list[NewsItem]) -> int:
 
     if saved > 0:
         await session.commit()
-    return saved
+        result = await session.execute(
+            select(Article).order_by(Article.id.desc()).limit(saved)
+        )
+        new_articles = [a.to_dict() for a in result.scalars().all()]
+
+    return saved, new_articles
 
 
 async def fetch_all_sources() -> dict:
@@ -92,8 +100,15 @@ async def fetch_all_sources() -> dict:
             stats["total_fetched"] += len(result)
             all_items.extend(result)
 
-        saved = await _save_items(session, all_items)
+        saved, new_articles = await _save_items(session, all_items)
         stats["total_saved"] = saved
 
-    logger.info(f"Fetch complete: {stats['total_fetched']} fetched, {saved} new")
+        if new_articles:
+            try:
+                from app.api.ws import broadcast_new_articles
+                await broadcast_new_articles(new_articles)
+            except Exception as e:
+                logger.debug(f"WebSocket broadcast skipped: {e}")
+
+    logger.info(f"Fetch complete: {stats['total_fetched']} fetched, {stats.get('total_saved', 0)} new")
     return stats

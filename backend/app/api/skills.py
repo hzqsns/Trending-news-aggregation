@@ -81,17 +81,21 @@ async def update_skill(
     skill = result.scalar_one_or_none()
     if not skill:
         return {"error": "Skill not found"}
-    if skill.is_builtin:
-        return {"error": "Cannot modify builtin skills"}
 
-    if body.name is not None:
-        skill.name = body.name
-    if body.description is not None:
-        skill.description = body.description
-    if body.config is not None:
-        skill.config = body.config
-    if body.is_enabled is not None:
-        skill.is_enabled = body.is_enabled
+    if skill.is_builtin:
+        if body.is_enabled is not None:
+            skill.is_enabled = body.is_enabled
+        else:
+            return {"error": "Cannot modify builtin skills (only is_enabled can be toggled)"}
+    else:
+        if body.name is not None:
+            skill.name = body.name
+        if body.description is not None:
+            skill.description = body.description
+        if body.config is not None:
+            skill.config = body.config
+        if body.is_enabled is not None:
+            skill.is_enabled = body.is_enabled
     skill.updated_at = datetime.utcnow()
     await session.commit()
     return skill.to_dict()

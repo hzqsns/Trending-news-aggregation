@@ -59,6 +59,76 @@ BUILTIN_SKILLS = [
             "top_events_count": 8,
         },
     },
+    {
+        "name": "市场情绪监控",
+        "slug": "market_sentiment_monitor",
+        "description": "综合分析市场情绪指标，输出情绪评级和仓位建议。参考 NAAIM、机构配置、散户资金流、远期 PE 等",
+        "skill_type": "monitor",
+        "config": {
+            "indicators": [
+                {"name": "NAAIM暴露指数", "warning_threshold": 80, "description": "活跃投资经理股票持仓比例，> 80 预警"},
+                {"name": "散户净买入额", "warning_threshold": 85, "description": "日均买入量 > 85% 历史水平 → 过热"},
+                {"name": "标普500远期PE", "warning_threshold": 22, "description": "接近历史估值峰值 → 背离信号"},
+                {"name": "对冲基金杠杆率", "warning_threshold": "历史高位", "description": "高杠杆 → 波动放大器"},
+            ],
+            "trigger_rules": {
+                "3+预警": "减仓信号",
+                "全部预警": "大幅减仓或对冲",
+            },
+            "output": "情绪评级(极度贪婪/贪婪/中性/恐慌) + 仓位建议",
+        },
+    },
+    {
+        "name": "宏观流动性监控",
+        "slug": "macro_liquidity_monitor",
+        "description": "监控全球流动性关键指标，判断资金面松紧程度。当多指标同时预警时触发减仓信号",
+        "skill_type": "monitor",
+        "config": {
+            "indicators": [
+                {"name": "净流动性", "formula": "美联储总资产 - TGA - ON RRP", "warning": "单周下降>5%"},
+                {"name": "SOFR(隔夜融资利率)", "warning": "突破5.5% → 减仓"},
+                {"name": "MOVE指数(美债波动率)", "warning": ">130 → 风险资产止损"},
+                {"name": "USDJPY + US2Y-JP2Y利差", "warning": "利差大幅收窄 → 套利交易平仓风险"},
+            ],
+            "output": "流动性评级(宽松/中性/紧张/危险) + 操作建议",
+        },
+    },
+    {
+        "name": "价值投资框架",
+        "slug": "value_investment_scorer",
+        "description": "基于基本面指标评估公司的投资价值，输出投资评级。适用于美股/港股/A股",
+        "skill_type": "scorer",
+        "config": {
+            "criteria": [
+                {"indicator": "ROE", "condition": "> 15%（持续3年以上）", "weight": 25},
+                {"indicator": "负债率", "condition": "< 50%", "weight": 20},
+                {"indicator": "自由现金流", "condition": "> 净利润的80%", "weight": 25},
+                {"indicator": "护城河", "condition": "品牌/网络效应/成本优势/转换成本", "weight": 30},
+            ],
+            "output": "投资评级(A/B/C/D) + 理由",
+        },
+    },
+    {
+        "name": "加密货币抄底模型",
+        "slug": "crypto_bottom_detector",
+        "description": "综合多维度链上和市场指标，识别加密货币超跌抄底机会",
+        "skill_type": "analyzer",
+        "config": {
+            "indicators": [
+                {"name": "RSI", "condition": "< 30 且周线级别超跌"},
+                {"name": "成交量", "condition": "恐慌抛售后萎缩(低于30日均量)"},
+                {"name": "MVRV比率", "condition": "< 1.0 (市值低于实现市值)"},
+                {"name": "社交媒体恐慌指数", "condition": "> 75"},
+                {"name": "矿机关机价", "condition": "现价接近或低于主流矿机关机价"},
+                {"name": "LTH供应占比", "condition": "上升(长期持有者增持)"},
+            ],
+            "trigger_rules": {
+                "4+指标满足": "分批建仓信号",
+                "5+指标满足": "重仓抄底信号",
+            },
+            "output": "抄底评级(强/中/弱) + 建议仓位比例",
+        },
+    },
 ]
 
 
