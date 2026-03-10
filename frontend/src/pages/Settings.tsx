@@ -19,6 +19,7 @@ const categoryInfo: Record<string, { label: string; icon: string }> = {
   sources: { label: '数据源配置', icon: '📡' },
   notifications: { label: '推送渠道', icon: '📮' },
   push_strategy: { label: '推送策略', icon: '📋' },
+  twitter: { label: '推特追踪', icon: '🐦' },
 }
 
 export default function Settings() {

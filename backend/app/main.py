@@ -164,6 +164,8 @@ async def _init_settings():
             "telegram_chat_id": settings.TELEGRAM_CHAT_ID,
             "pushplus_token": settings.PUSHPLUS_TOKEN,
             "qmsg_key": settings.QMSG_KEY,
+            "twitter_grok_api_base": settings.TWITTER_GROK_API_BASE,
+            "twitter_grok_api_key": settings.TWITTER_GROK_API_KEY,
         }
         for key, env_val in env_mapping.items():
             if env_val:

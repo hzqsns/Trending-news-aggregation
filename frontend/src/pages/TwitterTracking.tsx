@@ -1,0 +1,298 @@
+import { useEffect, useState } from 'react'
+import { Plus, Trash2, RefreshCw, ExternalLink, AtSign } from 'lucide-react'
+import { twitterApi, settingsApi } from '@/api'
+
+export default function TwitterTracking() {
+  const [handles, setHandles] = useState<string[]>([])
+  const [newHandle, setNewHandle] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [adding, setAdding] = useState(false)
+  const [fetching, setFetching] = useState(false)
+  const [fetchResult, setFetchResult] = useState<string | null>(null)
+  const [settings, setSettings] = useState<Record<string, string>>({})
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  const loadHandles = async () => {
+    try {
+      const resp = await twitterApi.listHandles()
+      setHandles(resp.data.handles)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const loadSettings = async () => {
+    try {
+      const resp = await settingsApi.list('twitter')
+      const items = resp.data.twitter || []
+      const s: Record<string, string> = {}
+      for (const item of items) {
+        if (item.key !== 'twitter_handles') {
+          s[item.key] = item.value ?? ''
+        }
+      }
+      setSettings(s)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    Promise.all([loadHandles(), loadSettings()]).finally(() => setLoading(false))
+  }, [])
+
+  const addHandle = async () => {
+    const h = newHandle.trim().replace(/^@/, '')
+    if (!h) return
+    setAdding(true)
+    try {
+      const resp = await twitterApi.addHandle(h)
+      setHandles(resp.data.handles)
+      setNewHandle('')
+    } catch (e: any) {
+      alert(e.response?.data?.detail || '添加失败')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const removeHandle = async (handle: string) => {
+    try {
+      const resp = await twitterApi.removeHandle(handle)
+      setHandles(resp.data.handles)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const manualFetch = async () => {
+    setFetching(true)
+    setFetchResult(null)
+    try {
+      const resp = await twitterApi.manualFetch()
+      setFetchResult(`采集完成：获取 ${resp.data.fetched} 条，新增 ${resp.data.saved} 条`)
+    } catch (e: any) {
+      setFetchResult(`采集失败：${e.response?.data?.detail || e.message}`)
+    } finally {
+      setFetching(false)
+    }
+  }
+
+  const saveSettings = async () => {
+    setSavingSettings(true)
+    try {
+      await settingsApi.batchUpdate(settings)
+      setSavingSettings(false)
+    } catch (e) {
+      console.error(e)
+      setSavingSettings(false)
+    }
+  }
+
+  if (loading) {
+    return <div className="p-8 text-center text-text-secondary">加载中...</div>
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold">推特博主追踪</h2>
+        <button
+          onClick={manualFetch}
+          disabled={fetching || handles.length === 0}
+          className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+        >
+          <RefreshCw size={16} className={fetching ? 'animate-spin' : ''} />
+          {fetching ? '采集中...' : '立即采集'}
+        </button>
+      </div>
+
+      {fetchResult && (
+        <div className="mb-4 p-3 bg-card border border-border rounded-lg text-sm">
+          {fetchResult}
+        </div>
+      )}
+
+      {/* 博主列表 */}
+      <div className="bg-card rounded-xl border border-border mb-6">
+        <div className="p-5 border-b border-border">
+          <h3 className="font-semibold">追踪的博主</h3>
+          <p className="text-xs text-text-secondary mt-1">添加推特博主的用户名（不含 @），系统会定时采集他们的投资相关推文</p>
+        </div>
+
+        {/* 添加输入框 */}
+        <div className="p-4 border-b border-border">
+          <div className="flex gap-2">
+            <div className="relative flex-1 max-w-md">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-sm">@</span>
+              <input
+                type="text"
+                value={newHandle}
+                onChange={(e) => setNewHandle(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && addHandle()}
+                placeholder="输入推特用户名，如 elonmusk"
+                className="w-full pl-8 pr-3 py-2 rounded-lg border border-border text-sm"
+              />
+            </div>
+            <button
+              onClick={addHandle}
+              disabled={adding || !newHandle.trim()}
+              className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+            >
+              <Plus size={16} />
+              添加
+            </button>
+          </div>
+        </div>
+
+        {/* 博主列表 */}
+        <div className="divide-y divide-border">
+          {handles.map((handle) => (
+            <div key={handle} className="flex items-center justify-between p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                  <AtSign size={16} className="text-blue-500" />
+                </div>
+                <div>
+                  <span className="text-sm font-medium">@{handle}</span>
+                  <a
+                    href={`https://x.com/${handle}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-2 text-text-secondary hover:text-primary"
+                  >
+                    <ExternalLink size={12} className="inline" />
+                  </a>
+                </div>
+              </div>
+              <button
+                onClick={() => removeHandle(handle)}
+                className="p-1.5 text-text-secondary hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+          {handles.length === 0 && (
+            <div className="p-8 text-center text-text-secondary text-sm">
+              暂未添加任何博主，请在上方输入框添加
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* X 账号认证 */}
+      <div className="bg-card rounded-xl border border-border">
+        <div className="p-5 border-b border-border flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold">X 账号认证</h3>
+            <p className="text-xs text-text-secondary mt-1">填写小号账号信息，系统将用 twikit 自动登录并采集推文</p>
+          </div>
+          <button
+            onClick={saveSettings}
+            disabled={savingSettings}
+            className="px-3 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-lg text-xs transition-colors disabled:opacity-50"
+          >
+            {savingSettings ? '保存中...' : '保存配置'}
+          </button>
+        </div>
+        <div className="divide-y divide-border">
+          <SettingRow
+            label="启用推特追踪"
+            description="开启后系统会定时采集配置的博主推文"
+            value={settings.twitter_enabled ?? 'false'}
+            type="boolean"
+            onChange={(v) => setSettings((s) => ({ ...s, twitter_enabled: v }))}
+          />
+          <SettingRow
+            label="X 用户名"
+            description="小号的 X 用户名（@handle）"
+            value={settings.twitter_auth_username ?? ''}
+            type="text"
+            onChange={(v) => setSettings((s) => ({ ...s, twitter_auth_username: v }))}
+          />
+          <SettingRow
+            label="X 邮箱"
+            description="小号的注册邮箱"
+            value={settings.twitter_auth_email ?? ''}
+            type="text"
+            onChange={(v) => setSettings((s) => ({ ...s, twitter_auth_email: v }))}
+          />
+          <SettingRow
+            label="X 密码"
+            description="小号的登录密码"
+            value={settings.twitter_auth_password ?? ''}
+            type="password"
+            onChange={(v) => setSettings((s) => ({ ...s, twitter_auth_password: v }))}
+          />
+          <SettingRow
+            label="采集间隔（分钟）"
+            description="建议 >= 30 以节省频率限制"
+            value={settings.twitter_fetch_interval ?? '30'}
+            type="number"
+            onChange={(v) => setSettings((s) => ({ ...s, twitter_fetch_interval: v }))}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SettingRow({
+  label,
+  description,
+  value,
+  type,
+  onChange,
+}: {
+  label: string
+  description: string
+  value: string
+  type: 'text' | 'password' | 'number' | 'boolean'
+  onChange: (v: string) => void
+}) {
+  const [showPwd, setShowPwd] = useState(false)
+
+  return (
+    <div className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="sm:w-1/3">
+        <div className="text-sm font-medium">{label}</div>
+        <div className="text-xs text-text-secondary">{description}</div>
+      </div>
+      <div className="sm:w-2/3">
+        {type === 'boolean' ? (
+          <button
+            type="button"
+            onClick={() => onChange(value === 'true' ? 'false' : 'true')}
+            className={`relative w-12 h-6 rounded-full transition-colors ${value === 'true' ? 'bg-green-500' : 'bg-gray-300'}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${value === 'true' ? 'left-6' : 'left-0.5'}`} />
+          </button>
+        ) : type === 'password' ? (
+          <div className="relative max-w-md">
+            <input
+              type={showPwd ? 'text' : 'password'}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full px-3 py-2 pr-10 rounded-lg border border-border text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPwd(!showPwd)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary text-sm"
+            >
+              {showPwd ? '隐藏' : '显示'}
+            </button>
+          </div>
+        ) : (
+          <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full max-w-md px-3 py-2 rounded-lg border border-border text-sm"
+          />
+        )}
+      </div>
+    </div>
+  )
+}

@@ -63,4 +63,11 @@ DEFAULT_SETTINGS = [
     {"key": "push_digest_interval", "value": "30", "category": "push_strategy", "label": "摘要推送间隔（分钟）", "description": "汇总推送的时间间隔", "field_type": "number"},
     {"key": "push_morning_report", "value": "true", "category": "push_strategy", "label": "推送早间日报", "description": "每日 07:30 推送市场早报", "field_type": "boolean"},
     {"key": "push_evening_report", "value": "true", "category": "push_strategy", "label": "推送晚间日报", "description": "每日 22:00 推送市场晚报", "field_type": "boolean"},
+    # --- 推特追踪配置 ---
+    {"key": "twitter_enabled", "value": "false", "category": "twitter", "label": "启用推特追踪", "description": "通过 twikit 直接采集推特博主的原始推文", "field_type": "boolean"},
+    {"key": "twitter_auth_username", "value": "", "category": "twitter", "label": "X 用户名", "description": "小号的 X 用户名（@handle）", "field_type": "text"},
+    {"key": "twitter_auth_email", "value": "", "category": "twitter", "label": "X 邮箱", "description": "小号的注册邮箱", "field_type": "text"},
+    {"key": "twitter_auth_password", "value": "", "category": "twitter", "label": "X 密码", "description": "小号的登录密码", "field_type": "password"},
+    {"key": "twitter_handles", "value": "[]", "category": "twitter", "label": "追踪博主列表", "description": "JSON 数组，如 [\"elonmusk\", \"CathieDWood\"]", "field_type": "json"},
+    {"key": "twitter_fetch_interval", "value": "30", "category": "twitter", "label": "采集间隔（分钟）", "description": "推特数据采集的时间间隔，建议 >= 30 以节省配额", "field_type": "number"},
 ]

@@ -12,6 +12,7 @@ from app.sources.base import NewsItem, NewsSource
 from app.sources.rss import RSSSource
 from app.sources.crypto import CryptoSource
 from app.sources.newsapi import NewsAPISource
+from app.sources.twitter import TwitterSource
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,7 @@ ALL_SOURCES: list[NewsSource] = [
     RSSSource(),
     CryptoSource(),
     NewsAPISource(),
+    TwitterSource(),
 ]
 
 

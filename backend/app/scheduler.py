@@ -8,6 +8,7 @@ from app.database import async_session
 from app.models.article import Article
 from app.models.setting import SystemSetting
 from app.sources.manager import fetch_all_sources
+from app.sources.twitter import TwitterSource
 from app.skills.engine import run_importance_scoring, generate_daily_report, run_anomaly_detection
 from app.notifiers.manager import push_important_news, push_news_digest
 
@@ -87,6 +88,28 @@ async def job_cleanup():
         logger.error(f"Cleanup job error: {e}")
 
 
+async def job_fetch_twitter():
+    logger.info("⏰ Running scheduled twitter fetch")
+    try:
+        source = TwitterSource()
+        items = await source.fetch()
+        if items:
+            async with async_session() as session:
+                from app.sources.manager import _save_items
+                saved, new_articles = await _save_items(session, items)
+                logger.info(f"Twitter fetch: {len(items)} fetched, {saved} saved")
+                if new_articles:
+                    try:
+                        from app.api.ws import broadcast_new_articles
+                        await broadcast_new_articles(new_articles)
+                    except Exception as e:
+                        logger.debug(f"WebSocket broadcast skipped: {e}")
+                if saved > 0:
+                    await run_importance_scoring()
+    except Exception as e:
+        logger.error(f"Twitter fetch job error: {e}")
+
+
 def start_scheduler():
     scheduler.add_job(job_fetch_news, "interval", minutes=15, id="fetch_news", replace_existing=True)
     scheduler.add_job(job_push_important, "interval", minutes=5, id="push_important", replace_existing=True)
@@ -95,6 +118,7 @@ def start_scheduler():
     scheduler.add_job(job_morning_report, "cron", hour=7, minute=30, id="morning_report", replace_existing=True)
     scheduler.add_job(job_evening_report, "cron", hour=22, minute=0, id="evening_report", replace_existing=True)
     scheduler.add_job(job_cleanup, "cron", hour=3, minute=0, id="cleanup", replace_existing=True)
+    scheduler.add_job(job_fetch_twitter, "interval", minutes=30, id="fetch_twitter", replace_existing=True)
     scheduler.start()
     logger.info("Scheduler started with all jobs")
 

@@ -40,3 +40,10 @@ export const settingsApi = {
   batchUpdate: (settings: Record<string, string>) => client.put('/settings/', { settings }),
   categories: () => client.get('/settings/categories'),
 }
+
+export const twitterApi = {
+  listHandles: () => client.get('/twitter/handles'),
+  addHandle: (handle: string) => client.post('/twitter/handles', { handle }),
+  removeHandle: (handle: string) => client.delete(`/twitter/handles/${handle}`),
+  manualFetch: () => client.post('/twitter/fetch'),
+}

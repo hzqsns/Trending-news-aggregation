@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     PUSHPLUS_TOKEN: Optional[str] = None
     QMSG_KEY: Optional[str] = None
 
+    TWITTER_GROK_API_BASE: str = ""
+    TWITTER_GROK_API_KEY: str = ""
+
     FRONTEND_URL: str = "http://localhost:5173"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}

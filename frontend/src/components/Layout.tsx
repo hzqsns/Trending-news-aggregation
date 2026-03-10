@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard, Newspaper, FileText, AlertTriangle, Cpu,
-  Settings, LogOut, Moon, Sun, Monitor, Menu, X,
+  Settings, LogOut, Moon, Sun, Monitor, Menu, X, AtSign,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/reports', icon: FileText, label: 'AI 日报' },
   { to: '/alerts', icon: AlertTriangle, label: '预警中心' },
   { to: '/skills', icon: Cpu, label: 'Skills' },
+  { to: '/twitter', icon: AtSign, label: '推特追踪' },
   { to: '/settings', icon: Settings, label: '系统设置' },
 ]
 

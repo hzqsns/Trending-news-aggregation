@@ -111,5 +111,6 @@ async def setting_categories(
             {"key": "sources", "label": "数据源配置"},
             {"key": "notifications", "label": "推送渠道"},
             {"key": "push_strategy", "label": "推送策略"},
+            {"key": "twitter", "label": "推特追踪"},
         ]
     }
