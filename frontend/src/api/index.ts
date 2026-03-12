@@ -46,4 +46,6 @@ export const twitterApi = {
   addHandle: (handle: string) => client.post('/twitter/handles', { handle }),
   removeHandle: (handle: string) => client.delete(`/twitter/handles/${handle}`),
   manualFetch: () => client.post('/twitter/fetch'),
+  testAuth: () => client.post('/twitter/test-auth'),
+  importCookies: (cookies: string) => client.post('/twitter/import-cookies', { cookies }),
 }

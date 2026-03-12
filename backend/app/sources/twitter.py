@@ -8,7 +8,6 @@ from sqlalchemy import select
 from app.database import async_session
 from app.models.setting import SystemSetting
 from app.sources.base import NewsSource, NewsItem
-from app.ai.client import chat_completion
 
 logger = logging.getLogger(__name__)
 
@@ -121,40 +120,6 @@ async def _fetch_user_tweets(client, handle: str, hours: int = 24) -> list[dict]
         return []
 
 
-async def _summarize(handle: str, tweets: list[dict]) -> str:
-    """Use AI to summarize investment insights from tweets. Fallback to raw text."""
-    raw_lines = []
-    for t in tweets:
-        ts = t["created_at"].strftime("%Y-%m-%d %H:%M")
-        raw_lines.append(f"[{ts}] {t['text']}")
-    raw_text = "\n".join(raw_lines)
-
-    messages = [
-        {
-            "role": "system",
-            "content": "你是专业的投资信息分析助手，擅长从社交媒体中提取有价值的投资观点。",
-        },
-        {
-            "role": "user",
-            "content": (
-                f"以下是推特博主 @{handle} 最近 24 小时内的推文：\n\n{raw_text}\n\n"
-                "请用中文总结其中有价值的投资观点、市场判断、推荐标的等关键信息。"
-                "如无投资相关内容，简要说明即可。总结控制在 300 字以内。"
-            ),
-        },
-    ]
-
-    try:
-        summary = await chat_completion(messages, temperature=0.3, max_tokens=500)
-        if summary:
-            return summary
-    except Exception as e:
-        logger.warning(f"Twitter: AI summarize failed for @{handle}: {e}")
-
-    # Fallback: return first 5 tweets as plain text
-    return "\n".join(f"- {t['text']}" for t in tweets[:5])
-
-
 class TwitterSource(NewsSource):
     name = "Twitter"
     category = "twitter"
@@ -180,22 +145,21 @@ class TwitterSource(NewsSource):
                 logger.info(f"Twitter: no recent tweets for @{handle}")
                 continue
 
-            summary = await _summarize(handle, tweets)
-            raw_block = "\n".join(
-                f"- [{t['created_at'].strftime('%H:%M')}] {t['text']}" for t in tweets
-            )
-            content = f"## AI 总结\n{summary}\n\n---\n\n## 原始推文\n{raw_block}"
+            for t in tweets:
+                # 标题取推文前 80 字符
+                title_text = t["text"].replace("\n", " ")
+                title = f"@{handle}: {title_text[:80]}{'…' if len(title_text) > 80 else ''}"
 
-            all_items.append(NewsItem(
-                title=f"@{handle} 投资观点 ({datetime.utcnow().strftime('%Y-%m-%d')})",
-                url=f"https://x.com/{handle}",
-                source="Twitter",
-                category="twitter",
-                summary=summary[:500],
-                content=content,
-                published_at=datetime.utcnow(),
-                importance=2,
-            ))
+                all_items.append(NewsItem(
+                    title=title,
+                    url=t["url"],          # https://x.com/{handle}/status/{id}，天然去重
+                    source="Twitter",
+                    category="twitter",
+                    summary=t["text"][:300],
+                    content=t["text"],
+                    published_at=t["created_at"],
+                    importance=2,
+                ))
 
-        logger.info(f"Twitter source fetched {len(all_items)} items for {len(config['handles'])} handles")
+        logger.info(f"Twitter source fetched {len(all_items)} tweets for {len(config['handles'])} handles")
         return all_items

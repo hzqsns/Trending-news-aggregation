@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, RefreshCw, ExternalLink, AtSign } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, ExternalLink, AtSign, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { twitterApi, settingsApi } from '@/api'
 
 export default function TwitterTracking() {
@@ -11,6 +11,9 @@ export default function TwitterTracking() {
   const [fetchResult, setFetchResult] = useState<string | null>(null)
   const [settings, setSettings] = useState<Record<string, string>>({})
   const [savingSettings, setSavingSettings] = useState(false)
+  const [cookieJson, setCookieJson] = useState('')
+  const [importingCookies, setImportingCookies] = useState(false)
+  const [cookieStatus, setCookieStatus] = useState<{ ok: boolean; message: string } | null>(null)
 
   const loadHandles = async () => {
     try {
@@ -82,10 +85,26 @@ export default function TwitterTracking() {
     setSavingSettings(true)
     try {
       await settingsApi.batchUpdate(settings)
-      setSavingSettings(false)
+      setAuthStatus(null) // 配置变更后重置连接状态
     } catch (e) {
       console.error(e)
+    } finally {
       setSavingSettings(false)
+    }
+  }
+
+  const importCookies = async () => {
+    if (!cookieJson.trim()) return
+    setImportingCookies(true)
+    setCookieStatus(null)
+    try {
+      const resp = await twitterApi.importCookies(cookieJson.trim())
+      setCookieStatus({ ok: true, message: resp.data.message })
+      setCookieJson('')
+    } catch (e: any) {
+      setCookieStatus({ ok: false, message: e.response?.data?.detail || e.message })
+    } finally {
+      setImportingCookies(false)
     }
   }
 
@@ -186,7 +205,7 @@ export default function TwitterTracking() {
         <div className="p-5 border-b border-border flex items-center justify-between">
           <div>
             <h3 className="font-semibold">X 账号认证</h3>
-            <p className="text-xs text-text-secondary mt-1">填写小号账号信息，系统将用 twikit 自动登录并采集推文</p>
+            <p className="text-xs text-text-secondary mt-1">导入浏览器 Cookie 完成认证，避免 Cloudflare 拦截</p>
           </div>
           <button
             onClick={saveSettings}
@@ -205,33 +224,48 @@ export default function TwitterTracking() {
             onChange={(v) => setSettings((s) => ({ ...s, twitter_enabled: v }))}
           />
           <SettingRow
-            label="X 用户名"
-            description="小号的 X 用户名（@handle）"
-            value={settings.twitter_auth_username ?? ''}
-            type="text"
-            onChange={(v) => setSettings((s) => ({ ...s, twitter_auth_username: v }))}
-          />
-          <SettingRow
-            label="X 邮箱"
-            description="小号的注册邮箱"
-            value={settings.twitter_auth_email ?? ''}
-            type="text"
-            onChange={(v) => setSettings((s) => ({ ...s, twitter_auth_email: v }))}
-          />
-          <SettingRow
-            label="X 密码"
-            description="小号的登录密码"
-            value={settings.twitter_auth_password ?? ''}
-            type="password"
-            onChange={(v) => setSettings((s) => ({ ...s, twitter_auth_password: v }))}
-          />
-          <SettingRow
             label="采集间隔（分钟）"
             description="建议 >= 30 以节省频率限制"
             value={settings.twitter_fetch_interval ?? '30'}
             type="number"
             onChange={(v) => setSettings((s) => ({ ...s, twitter_fetch_interval: v }))}
           />
+        </div>
+
+        {/* Cookie 导入区域 */}
+        <div className="p-5 border-t border-border">
+          <div className="mb-3">
+            <h4 className="text-sm font-medium">导入浏览器 Cookie</h4>
+            <p className="text-xs text-text-secondary mt-1">
+              在浏览器中登录 <a href="https://x.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">x.com</a>，安装
+              <a href="https://chrome.google.com/webstore/detail/cookie-editor/hlkenndednhfkekhgcdicdfddnkalmdm" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline mx-1">Cookie-Editor</a>
+              插件，Export → Export as JSON，将结果粘贴到下方
+            </p>
+          </div>
+          <textarea
+            value={cookieJson}
+            onChange={(e) => setCookieJson(e.target.value)}
+            placeholder='粘贴 Cookie JSON，如：[{"name":"auth_token","value":"..."},...]'
+            rows={4}
+            className="w-full px-3 py-2 rounded-lg border border-border text-xs font-mono resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+          {cookieStatus && (
+            <div className={`mt-2 flex items-start gap-2 p-3 rounded-lg text-sm ${cookieStatus.ok ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'}`}>
+              {cookieStatus.ok
+                ? <CheckCircle size={16} className="shrink-0 mt-0.5" />
+                : <XCircle size={16} className="shrink-0 mt-0.5" />}
+              <span>{cookieStatus.message}</span>
+            </div>
+          )}
+          <button
+            onClick={importCookies}
+            disabled={importingCookies || !cookieJson.trim()}
+            className="mt-3 flex items-center gap-1.5 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            {importingCookies
+              ? <><Loader size={14} className="animate-spin" />导入验证中...</>
+              : <><CheckCircle size={14} />导入并验证</>}
+          </button>
         </div>
       </div>
     </div>
