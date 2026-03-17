@@ -9,6 +9,7 @@ import Alerts from '@/pages/Alerts'
 import Skills from '@/pages/Skills'
 import Settings from '@/pages/Settings'
 import TwitterTracking from '@/pages/TwitterTracking'
+import Bookmarks from '@/pages/Bookmarks'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/skills" element={<Skills />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/twitter" element={<TwitterTracking />} />
+          <Route path="/bookmarks" element={<Bookmarks />} />
         </Route>
       </Routes>
     </BrowserRouter>
