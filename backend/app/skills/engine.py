@@ -38,7 +38,7 @@ async def score_article_importance(article: Article) -> dict | None:
             "content": f"标题: {article.title}\n来源: {article.source}\n分类: {article.category}\n摘要: {article.summary or '无'}",
         },
     ]
-    return await chat_completion_json(messages, max_tokens=300)
+    return await chat_completion_json(messages, max_tokens=2000)
 
 
 async def run_importance_scoring():
@@ -109,7 +109,7 @@ async def generate_daily_report(report_type: str = "morning"):
             {"role": "user", "content": f"最近的重要新闻：\n{news_text}"},
         ]
 
-        content = await chat_completion(messages, max_tokens=2000, temperature=0.4)
+        content = await chat_completion(messages, max_tokens=16000, temperature=0.4)
         if not content:
             return
 
@@ -119,9 +119,10 @@ async def generate_daily_report(report_type: str = "morning"):
             .where(DailyReport.report_type == report_type)
             .where(DailyReport.report_date == today)
         )
-        if existing.scalar_one_or_none():
+        existing_report = existing.scalar_one_or_none()
+        if existing_report:
             logger.info(f"{report_type} report already exists for {today}")
-            return
+            return existing_report
 
         report = DailyReport(
             report_type=report_type,

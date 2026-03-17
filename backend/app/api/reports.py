@@ -1,6 +1,7 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -40,6 +41,30 @@ async def latest_report(
     result = await session.execute(query)
     report = result.scalar_one_or_none()
     return report.to_dict() if report else None
+
+
+class GenerateRequest(BaseModel):
+    report_type: str = "morning"  # morning | evening
+
+
+@router.post("/generate")
+async def generate_report(
+    body: GenerateRequest,
+    _=Depends(get_current_user),
+):
+    """手动触发生成 AI 日报"""
+    if body.report_type not in ("morning", "evening"):
+        raise HTTPException(status_code=400, detail="report_type 必须是 morning 或 evening")
+    try:
+        from app.skills.engine import generate_daily_report
+        report = await generate_daily_report(body.report_type)
+        if report:
+            return report.to_dict()
+        raise HTTPException(status_code=500, detail="日报生成失败，请检查 AI 配置和新闻数据是否充足")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/{report_id}")

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Save, Check, Eye, EyeOff } from 'lucide-react'
+import { Save, Check, Eye, EyeOff, Zap, X } from 'lucide-react'
 import { settingsApi } from '@/api'
 
 interface SettingItem {
@@ -22,6 +22,12 @@ const categoryInfo: Record<string, { label: string; icon: string }> = {
   twitter: { label: '推特追踪', icon: '🐦' },
 }
 
+interface AiProvider {
+  key: string
+  api_base: string
+  default_model: string
+}
+
 export default function Settings() {
   const [grouped, setGrouped] = useState<Record<string, SettingItem[]>>({})
   const [edits, setEdits] = useState<Record<string, string>>({})
@@ -30,6 +36,10 @@ export default function Settings() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('system')
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
+  const [aiProviders, setAiProviders] = useState<AiProvider[]>([])
+  const [testingAi, setTestingAi] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
 
   const load = async () => {
     try {
@@ -49,7 +59,15 @@ export default function Settings() {
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+    settingsApi.aiProviders().then((r) => setAiProviders(r.data.providers)).catch(() => {})
+  }, [])
+
+  const showToast = (type: 'success' | 'error', message: string) => {
+    setToast({ type, message })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -63,12 +81,40 @@ export default function Settings() {
       }
       await settingsApi.batchUpdate(changed)
       setSaved(true)
+      showToast('success', '设置已保存成功')
       setTimeout(() => setSaved(false), 3000)
       await load()
     } catch (e) {
       console.error(e)
+      showToast('error', '保存失败，请重试')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleTestAi = async () => {
+    setTestingAi(true)
+    setTestResult(null)
+    try {
+      const resp = await settingsApi.testAi()
+      setTestResult(resp.data)
+    } catch (e) {
+      setTestResult({ success: false, message: '请求失败，请检查网络连接' })
+    } finally {
+      setTestingAi(false)
+    }
+  }
+
+  const handleProviderChange = (provider: string) => {
+    setEdits((e) => ({ ...e, ai_provider: provider }))
+    const preset = aiProviders.find((p) => p.key === provider)
+    if (preset && preset.key !== 'custom') {
+      setEdits((e) => ({
+        ...e,
+        ai_provider: provider,
+        ai_api_base: preset.api_base,
+        ai_model: preset.default_model,
+      }))
     }
   }
 
@@ -82,6 +128,16 @@ export default function Settings() {
 
   return (
     <div>
+      {/* Toast 通知 */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm transition-all ${
+          toast.type === 'success' ? 'bg-success' : 'bg-danger'
+        }`}>
+          {toast.type === 'success' ? <Check size={16} /> : <X size={16} />}
+          {toast.message}
+        </div>
+      )}
+
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">系统设置</h2>
         <button
@@ -128,15 +184,34 @@ export default function Settings() {
                   )}
                 </div>
                 <div className="sm:w-2/3">
-                  <SettingField
-                    item={item}
-                    value={edits[item.key] ?? ''}
-                    onChange={(v) => setEdits((e) => ({ ...e, [item.key]: v }))}
-                    showPassword={showPasswords[item.key] || false}
-                    onTogglePassword={() =>
-                      setShowPasswords((s) => ({ ...s, [item.key]: !s[item.key] }))
-                    }
-                  />
+                  {item.key === 'ai_provider' && aiProviders.length > 0 ? (
+                    <select
+                      value={edits[item.key] ?? 'custom'}
+                      onChange={(e) => handleProviderChange(e.target.value)}
+                      className="w-full max-w-md px-3 py-2 rounded-lg border border-border text-sm"
+                    >
+                      {aiProviders.map((p) => (
+                        <option key={p.key} value={p.key}>
+                          {p.key === 'custom' ? '自定义' :
+                           p.key === 'gemini' ? 'Google Gemini' :
+                           p.key === 'openrouter' ? 'OpenRouter' :
+                           p.key === 'dashscope' ? '阿里云 DashScope（通义千问）' :
+                           p.key === 'deepseek' ? 'DeepSeek' :
+                           p.key === 'openai' ? 'OpenAI' : p.key}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <SettingField
+                      item={item}
+                      value={edits[item.key] ?? ''}
+                      onChange={(v) => setEdits((e) => ({ ...e, [item.key]: v }))}
+                      showPassword={showPasswords[item.key] || false}
+                      onTogglePassword={() =>
+                        setShowPasswords((s) => ({ ...s, [item.key]: !s[item.key] }))
+                      }
+                    />
+                  )}
                 </div>
               </div>
             </div>
@@ -145,6 +220,31 @@ export default function Settings() {
             <div className="p-8 text-center text-text-secondary">此分类暂无设置项</div>
           )}
         </div>
+
+        {/* AI 配置测试按钮 */}
+        {activeTab === 'ai' && (
+          <div className="p-5 border-t border-border">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleTestAi}
+                disabled={testingAi}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+              >
+                <Zap size={16} />
+                {testingAi ? '测试中...' : '测试 API 连接'}
+              </button>
+              {testResult && (
+                <span className={`text-sm ${testResult.success ? 'text-success' : 'text-danger'}`}>
+                  {testResult.success ? <Check size={14} className="inline mr-1" /> : <X size={14} className="inline mr-1" />}
+                  {testResult.message}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-text-secondary mt-2">
+              点击测试当前保存的 AI 配置是否能正常连接。请先保存设置再测试。
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )

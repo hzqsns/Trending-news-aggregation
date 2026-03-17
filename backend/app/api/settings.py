@@ -43,6 +43,54 @@ async def list_settings(
     return grouped
 
 
+@router.post("/test-ai")
+async def test_ai_connection(
+    _=Depends(get_current_user),
+):
+    """测试 AI API 连接是否正常"""
+    from app.ai.client import _get_ai_config
+    import httpx
+
+    config = await _get_ai_config()
+    if not config["api_key"]:
+        return {"success": False, "message": "未配置 API Key"}
+
+    url = f"{config['api_base'].rstrip('/')}/chat/completions"
+    payload = {
+        "model": config["model"],
+        "messages": [{"role": "user", "content": "Hi, reply with 'ok' only."}],
+        "temperature": 0,
+        "max_tokens": 100,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                url,
+                json=payload,
+                headers={
+                    "Authorization": f"Bearer {config['api_key']}",
+                    "Content-Type": "application/json",
+                },
+            )
+            if resp.status_code == 200:
+                return {
+                    "success": True,
+                    "message": f"连接成功！模型: {config['model']}",
+                    "model": config["model"],
+                }
+            else:
+                error_text = resp.text[:200]
+                return {
+                    "success": False,
+                    "message": f"API 返回错误 ({resp.status_code}): {error_text}",
+                }
+    except httpx.TimeoutException:
+        return {"success": False, "message": "连接超时，请检查 API 地址是否正确"}
+    except Exception as e:
+        return {"success": False, "message": f"连接失败: {str(e)}"}
+
+
 @router.get("/raw/{key}")
 async def get_setting_raw(
     key: str,
@@ -97,6 +145,18 @@ async def batch_update_settings(
             updated.append(key)
     await session.commit()
     return {"updated": updated}
+
+
+@router.get("/ai-providers")
+async def ai_providers(_=Depends(get_current_user)):
+    """返回 AI 服务商预设列表"""
+    from app.ai.client import PROVIDER_PRESETS
+    providers = [
+        {"key": k, "api_base": v["api_base"], "default_model": v["default_model"]}
+        for k, v in PROVIDER_PRESETS.items()
+    ]
+    providers.append({"key": "custom", "api_base": "", "default_model": ""})
+    return {"providers": providers}
 
 
 @router.get("/categories")

@@ -18,6 +18,7 @@ export const reportsApi = {
   list: (params: Record<string, unknown> = {}) => client.get('/reports/', { params }),
   latest: (type?: string) => client.get('/reports/latest', { params: { report_type: type } }),
   get: (id: number) => client.get(`/reports/${id}`),
+  generate: (report_type: 'morning' | 'evening') => client.post('/reports/generate', { report_type }),
 }
 
 export const alertsApi = {
@@ -39,6 +40,8 @@ export const settingsApi = {
   update: (key: string, value: string) => client.put(`/settings/${key}`, { value }),
   batchUpdate: (settings: Record<string, string>) => client.put('/settings/', { settings }),
   categories: () => client.get('/settings/categories'),
+  aiProviders: () => client.get('/settings/ai-providers'),
+  testAi: () => client.post('/settings/test-ai'),
 }
 
 export const twitterApi = {
