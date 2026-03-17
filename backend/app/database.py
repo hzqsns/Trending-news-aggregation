@@ -52,6 +52,7 @@ async def init_db():
     from app.models.skill import Skill  # noqa: F401
     from app.models.sentiment import SentimentSnapshot  # noqa: F401
     from app.models.setting import SystemSetting  # noqa: F401
+    from app.models.bookmark import ArticleBookmark  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

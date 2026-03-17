@@ -11,7 +11,7 @@ class ArticleBookmark(Base):
     article_id: Mapped[int] = mapped_column(Integer, ForeignKey("articles.id", ondelete="CASCADE"), nullable=False)
     user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
-    tags: Mapped[list | None] = mapped_column(JSONField, nullable=True, default=list)
+    tags: Mapped[list[str] | None] = mapped_column(JSONField, nullable=True, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -27,6 +27,6 @@ class ArticleBookmark(Base):
             "user_id": self.user_id,
             "note": self.note,
             "tags": self.tags or [],
-            "created_at": self.created_at.isoformat(),
-            "updated_at": self.updated_at.isoformat(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
