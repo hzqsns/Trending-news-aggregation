@@ -52,3 +52,15 @@ export const twitterApi = {
   testAuth: () => client.post('/twitter/test-auth'),
   importCookies: (cookies: string) => client.post('/twitter/import-cookies', { cookies }),
 }
+
+export const bookmarksApi = {
+  list: (params: Record<string, unknown> = {}) => client.get('/bookmarks/', { params }),
+  create: (article_id: number, note?: string, tags?: string[]) =>
+    client.post('/bookmarks/', { article_id, note: note ?? null, tags: tags ?? [] }),
+  update: (article_id: number, note: string | null, tags: string[]) =>
+    client.put(`/bookmarks/${article_id}`, { note, tags }),
+  remove: (article_id: number) => client.delete(`/bookmarks/${article_id}`),
+  tags: () => client.get('/bookmarks/tags'),
+  status: (article_ids: number[]) =>
+    client.get('/bookmarks/status', { params: { article_ids: article_ids.join(',') } }),
+}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Search, RefreshCw, ExternalLink } from 'lucide-react'
-import { articlesApi } from '@/api'
+import { Search, RefreshCw, ExternalLink, Bookmark, BookmarkCheck, X, Tag } from 'lucide-react'
+import { articlesApi, bookmarksApi } from '@/api'
 
 interface Article {
   id: number
@@ -35,6 +35,11 @@ export default function NewsFeed() {
   const [importance, setImportance] = useState(0)
   const [page, setPage] = useState(1)
   const [categories, setCategories] = useState<{category: string; count: number}[]>([])
+  const [bookmarks, setBookmarks] = useState<Record<number, any>>({})
+  const [activeBookmark, setActiveBookmark] = useState<number | null>(null)
+  const [bookmarkNote, setBookmarkNote] = useState('')
+  const [bookmarkTags, setBookmarkTags] = useState('')
+  const [bookmarkSaving, setBookmarkSaving] = useState(false)
 
   const loadArticles = async () => {
     setLoading(true)
@@ -45,6 +50,10 @@ export default function NewsFeed() {
       if (importance > 0) params.importance_min = importance
       const resp = await articlesApi.list(params)
       setData(resp.data)
+      if (resp.data?.items?.length) {
+        const ids = resp.data.items.map((a: Article) => a.id)
+        bookmarksApi.status(ids).then((r) => setBookmarks(r.data)).catch(() => {})
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -62,6 +71,45 @@ export default function NewsFeed() {
     e.preventDefault()
     setPage(1)
     loadArticles()
+  }
+
+  const openBookmarkPanel = (articleId: number) => {
+    const existing = bookmarks[articleId]
+    setBookmarkNote(existing?.note ?? '')
+    setBookmarkTags((existing?.tags ?? []).join(', '))
+    setActiveBookmark(articleId)
+  }
+
+  const closeBookmarkPanel = () => setActiveBookmark(null)
+
+  const saveBookmark = async (articleId: number) => {
+    setBookmarkSaving(true)
+    const tags = bookmarkTags.split(',').map(t => t.trim()).filter(Boolean)
+    try {
+      if (bookmarks[articleId]) {
+        await bookmarksApi.update(articleId, bookmarkNote || null, tags)
+      } else {
+        await bookmarksApi.create(articleId, bookmarkNote || undefined, tags)
+      }
+      const ids = data?.items.map(a => a.id) ?? []
+      const r = await bookmarksApi.status(ids)
+      setBookmarks(r.data)
+      setActiveBookmark(null)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setBookmarkSaving(false)
+    }
+  }
+
+  const removeBookmark = async (articleId: number) => {
+    try {
+      await bookmarksApi.remove(articleId)
+      setBookmarks(prev => ({ ...prev, [articleId]: null }))
+      setActiveBookmark(null)
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   return (
@@ -123,7 +171,7 @@ export default function NewsFeed() {
           <>
             <div className="divide-y divide-border">
               {data.items.map((a) => (
-                <div key={a.id} className="p-4 hover:bg-bg/50 transition-colors">
+                <div key={a.id} className="p-4 hover:bg-bg/50 transition-colors relative">
                   <div className="flex items-start gap-3">
                     <span className="shrink-0 mt-0.5 text-sm">
                       {a.importance >= 4 ? '🚨' : a.importance >= 3 ? '⚠️' : '📰'}
@@ -148,7 +196,63 @@ export default function NewsFeed() {
                         </span>
                       </div>
                     </div>
+                    {/* Bookmark button */}
+                    <button
+                      onClick={() => activeBookmark === a.id ? closeBookmarkPanel() : openBookmarkPanel(a.id)}
+                      className={`shrink-0 mt-0.5 p-1 rounded hover:bg-bg transition-colors ${bookmarks[a.id] ? 'text-primary' : 'text-text-secondary'}`}
+                      title={bookmarks[a.id] ? '已收藏' : '收藏'}
+                    >
+                      {bookmarks[a.id] ? <BookmarkCheck size={16} /> : <Bookmark size={16} />}
+                    </button>
                   </div>
+
+                  {/* Bookmark panel inline below article */}
+                  {activeBookmark === a.id && (
+                    <div className="mt-3 ml-7 p-3 bg-bg rounded-lg border border-border">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-medium">
+                          {bookmarks[a.id] ? '编辑收藏' : '添加收藏'}
+                        </span>
+                        <button onClick={closeBookmarkPanel} className="text-text-secondary hover:text-text">
+                          <X size={14} />
+                        </button>
+                      </div>
+                      <textarea
+                        value={bookmarkNote}
+                        onChange={e => setBookmarkNote(e.target.value)}
+                        placeholder="添加笔记（可选）..."
+                        maxLength={2000}
+                        rows={2}
+                        className="w-full text-xs px-2 py-1.5 rounded border border-border resize-none mb-2"
+                      />
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Tag size={12} className="text-text-secondary shrink-0" />
+                        <input
+                          value={bookmarkTags}
+                          onChange={e => setBookmarkTags(e.target.value)}
+                          placeholder="标签，逗号分隔（如: 美联储, 比特币）"
+                          className="flex-1 text-xs px-2 py-1 rounded border border-border"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => saveBookmark(a.id)}
+                          disabled={bookmarkSaving}
+                          className="px-3 py-1 bg-primary text-white text-xs rounded hover:bg-primary-dark disabled:opacity-50"
+                        >
+                          {bookmarkSaving ? '保存中...' : '保存'}
+                        </button>
+                        {bookmarks[a.id] && (
+                          <button
+                            onClick={() => removeBookmark(a.id)}
+                            className="px-3 py-1 bg-danger text-white text-xs rounded hover:opacity-90"
+                          >
+                            取消收藏
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
