@@ -20,8 +20,6 @@ MAX_NOTE_LENGTH = 2000
 
 
 def _validate_tags(tags: list[str]) -> list[str]:
-    if len(tags) > MAX_TAGS_PER_BOOKMARK:
-        raise HTTPException(status_code=400, detail=f"标签数量不能超过 {MAX_TAGS_PER_BOOKMARK} 个")
     cleaned = []
     seen = set()
     for tag in tags:
@@ -33,16 +31,9 @@ def _validate_tags(tags: list[str]) -> list[str]:
         if tag not in seen:
             seen.add(tag)
             cleaned.append(tag)
+    if len(cleaned) > MAX_TAGS_PER_BOOKMARK:
+        raise HTTPException(status_code=400, detail=f"标签数量不能超过 {MAX_TAGS_PER_BOOKMARK} 个")
     return cleaned
-
-
-async def _get_user_id(session: AsyncSession, current_user: User) -> int:
-    # get_current_user already returns a User ORM object; just verify it's persisted
-    result = await session.execute(select(User).where(User.username == current_user.username))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=401, detail="用户不存在")
-    return user.id
 
 
 class CreateBookmarkBody(BaseModel):
@@ -62,7 +53,7 @@ async def list_tags(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    user_id = await _get_user_id(session, current_user)
+    user_id = current_user.id
     result = await session.execute(
         select(ArticleBookmark.tags).where(ArticleBookmark.user_id == user_id)
     )
@@ -91,7 +82,7 @@ async def batch_status(
     if len(id_list) > 100:
         raise HTTPException(status_code=400, detail="单次最多查询 100 条")
 
-    user_id = await _get_user_id(session, current_user)
+    user_id = current_user.id
     result = await session.execute(
         select(ArticleBookmark).where(
             ArticleBookmark.user_id == user_id,
@@ -112,7 +103,7 @@ async def list_bookmarks(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    user_id = await _get_user_id(session, current_user)
+    user_id = current_user.id
 
     query = (
         select(ArticleBookmark, Article)
@@ -143,7 +134,7 @@ async def list_bookmarks(
         "items": items,
         "total": total,
         "page": page,
-        "pages": (total + page_size - 1) // page_size if total > 0 else 1,
+        "pages": (total + page_size - 1) // page_size,
     }
 
 
@@ -157,7 +148,7 @@ async def create_bookmark(
     if body.note and len(body.note) > MAX_NOTE_LENGTH:
         raise HTTPException(status_code=400, detail=f"备注长度不能超过 {MAX_NOTE_LENGTH} 个字符")
 
-    user_id = await _get_user_id(session, current_user)
+    user_id = current_user.id
 
     # Verify article exists
     art_result = await session.execute(select(Article).where(Article.id == body.article_id))
@@ -195,7 +186,7 @@ async def update_bookmark(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    user_id = await _get_user_id(session, current_user)
+    user_id = current_user.id
 
     result = await session.execute(
         select(ArticleBookmark).where(
@@ -227,7 +218,7 @@ async def delete_bookmark(
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ):
-    user_id = await _get_user_id(session, current_user)
+    user_id = current_user.id
 
     result = await session.execute(
         select(ArticleBookmark).where(
