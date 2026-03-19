@@ -27,3 +27,4 @@ frontend/dist/
 
 # Runtime
 .pids
+backend/test_twikit.py
