@@ -15,12 +15,7 @@ from app.models.sentiment import SentimentSnapshot
 logger = logging.getLogger(__name__)
 
 
-async def score_article_importance(article: Article) -> dict | None:
-    """Use AI to score an article's importance (0-5)."""
-    messages = [
-        {
-            "role": "system",
-            "content": """你是一个专业的财经新闻分析 Agent。请对以下新闻进行重要度评分。
+_SCORING_SYSTEM_PROMPT = """你是一个专业的财经新闻分析 Agent。请对以下多条新闻分别进行重要度评分。
 
 评分标准：
 - 5分：涉及央行政策重大变化、金融危机级别事件、市场单日暴涨暴跌(>5%)
@@ -30,19 +25,38 @@ async def score_article_importance(article: Article) -> dict | None:
 - 1分：一般性财经资讯
 - 0分：与财经/投资无关
 
-请以 JSON 格式返回：
-{"importance": 数字0-5, "sentiment": "bullish/bearish/neutral", "tags": ["标签1","标签2"], "reason": "评分理由"}""",
-        },
-        {
-            "role": "user",
-            "content": f"标题: {article.title}\n来源: {article.source}\n分类: {article.category}\n摘要: {article.summary or '无'}",
-        },
+返回 JSON，格式严格如下（results 数组长度必须等于输入文章数）：
+{"results": [{"index": 1, "importance": 0-5, "sentiment": "bullish/bearish/neutral", "tags": ["标签"], "reason": "理由"}, ...]}"""
+
+BATCH_SIZE = 10  # 每批文章数，可按需调整
+
+
+async def _score_batch(articles: list[Article]) -> dict[int, dict]:
+    """批量评分，一次 API 调用处理多篇文章，返回 {article.id: analysis_dict}。"""
+    articles_text = "\n\n".join(
+        f"[{i + 1}] 标题: {a.title}\n来源: {a.source}\n分类: {a.category}\n摘要: {a.summary or '无'}"
+        for i, a in enumerate(articles)
+    )
+    messages = [
+        {"role": "system", "content": _SCORING_SYSTEM_PROMPT},
+        {"role": "user", "content": f"请评分以下 {len(articles)} 条新闻：\n\n{articles_text}"},
     ]
-    return await chat_completion_json(messages, max_tokens=2000)
+    # 每篇约 100 token 输出，留足余量
+    result = await chat_completion_json(messages, max_tokens=120 * len(articles))
+    if not result or not isinstance(result.get("results"), list):
+        return {}
+
+    out: dict[int, dict] = {}
+    for item in result["results"]:
+        idx = item.get("index")
+        if not isinstance(idx, int) or not (1 <= idx <= len(articles)):
+            continue
+        out[articles[idx - 1].id] = item
+    return out
 
 
 async def run_importance_scoring():
-    """Score all unscored articles from the last 24 hours."""
+    """批量评分最近 24h 内未评分的文章，每批 BATCH_SIZE 篇合并为一次 API 调用。"""
     async with async_session() as session:
         since = datetime.utcnow() - timedelta(hours=24)
         result = await session.execute(
@@ -53,20 +67,32 @@ async def run_importance_scoring():
             .limit(50)
         )
         articles = result.scalars().all()
+        if not articles:
+            logger.info("No articles to score")
+            return
 
         scored = 0
-        for article in articles:
-            analysis = await score_article_importance(article)
-            if analysis:
-                article.importance = analysis.get("importance", 0)
-                article.sentiment = analysis.get("sentiment")
-                article.ai_analysis = analysis
-                article.tags = ",".join(analysis.get("tags", []))
-                scored += 1
+        # 分批处理
+        for i in range(0, len(articles), BATCH_SIZE):
+            batch = articles[i: i + BATCH_SIZE]
+            try:
+                analyses = await _score_batch(batch)
+            except Exception as e:
+                logger.error(f"Batch scoring failed (batch {i // BATCH_SIZE + 1}): {e}")
+                analyses = {}
+
+            for article in batch:
+                analysis = analyses.get(article.id)
+                if analysis:
+                    article.importance = int(analysis.get("importance", 0))
+                    article.sentiment = analysis.get("sentiment")
+                    article.ai_analysis = analysis
+                    article.tags = ",".join(analysis.get("tags", []))
+                    scored += 1
 
         if scored > 0:
             await session.commit()
-        logger.info(f"Scored {scored} articles")
+        logger.info(f"Scored {scored}/{len(articles)} articles in {-(-len(articles) // BATCH_SIZE)} batches")
 
 
 async def generate_daily_report(report_type: str = "morning"):
@@ -109,7 +135,7 @@ async def generate_daily_report(report_type: str = "morning"):
             {"role": "user", "content": f"最近的重要新闻：\n{news_text}"},
         ]
 
-        content = await chat_completion(messages, max_tokens=16000, temperature=0.4)
+        content = await chat_completion(messages, max_tokens=3000, temperature=0.4)
         if not content:
             return
 
