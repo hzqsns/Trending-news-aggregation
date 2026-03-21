@@ -39,10 +39,11 @@ DEFAULT_SETTINGS = [
     {"key": "timezone", "value": "Asia/Shanghai", "category": "system", "label": "时区", "description": "系统使用的时区", "field_type": "text"},
     # --- AI 配置 ---
     {"key": "ai_enabled", "value": "true", "category": "ai", "label": "启用 AI 分析", "description": "是否启用 AI 驱动的新闻分析和评分", "field_type": "boolean"},
-    {"key": "ai_provider", "value": "custom", "category": "ai", "label": "AI 服务商", "description": "选择预设服务商或自定义（gemini / openrouter / dashscope / deepseek / openai / custom）", "field_type": "text"},
+    {"key": "ai_provider", "value": "custom", "category": "ai", "label": "AI 服务商", "description": "选择预设服务商或自定义（gemini / openrouter / dashscope / deepseek / openai / minimax / custom）", "field_type": "text"},
     {"key": "ai_api_key", "value": "", "category": "ai", "label": "AI API Key", "description": "对应服务商的 API Key", "field_type": "password"},
     {"key": "ai_api_base", "value": "https://api.openai.com/v1", "category": "ai", "label": "AI API Base URL", "description": "接口地址（选择预设服务商时自动填充）", "field_type": "text"},
     {"key": "ai_model", "value": "gpt-4o-mini", "category": "ai", "label": "AI 模型", "description": "模型名称", "field_type": "text"},
+    {"key": "ai_api_format", "value": "openai", "category": "ai", "label": "API 格式", "description": "openai（兼容 OpenAI 格式）或 anthropic（兼容 Anthropic 格式，支持 MiniMax 等）", "field_type": "text"},
     # --- 数据源配置 ---
     {"key": "source_rss_enabled", "value": "true", "category": "sources", "label": "启用 RSS 源", "description": "从财经 RSS 源采集新闻", "field_type": "boolean"},
     {"key": "source_rss_feeds", "value": "[]", "category": "sources", "label": "RSS 源列表", "description": "JSON 格式的 RSS 源配置", "field_type": "json"},

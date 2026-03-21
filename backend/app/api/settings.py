@@ -152,10 +152,10 @@ async def ai_providers(_=Depends(get_current_user)):
     """返回 AI 服务商预设列表"""
     from app.ai.client import PROVIDER_PRESETS
     providers = [
-        {"key": k, "api_base": v["api_base"], "default_model": v["default_model"]}
+        {"key": k, "api_base": v["api_base"], "default_model": v["default_model"], "api_format": v.get("api_format", "openai")}
         for k, v in PROVIDER_PRESETS.items()
     ]
-    providers.append({"key": "custom", "api_base": "", "default_model": ""})
+    providers.append({"key": "custom", "api_base": "", "default_model": "", "api_format": "openai"})
     return {"providers": providers}
 
 

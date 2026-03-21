@@ -26,6 +26,7 @@ interface AiProvider {
   key: string
   api_base: string
   default_model: string
+  api_format?: string
 }
 
 export default function Settings() {
@@ -106,7 +107,6 @@ export default function Settings() {
   }
 
   const handleProviderChange = (provider: string) => {
-    setEdits((e) => ({ ...e, ai_provider: provider }))
     const preset = aiProviders.find((p) => p.key === provider)
     if (preset && preset.key !== 'custom') {
       setEdits((e) => ({
@@ -114,7 +114,10 @@ export default function Settings() {
         ai_provider: provider,
         ai_api_base: preset.api_base,
         ai_model: preset.default_model,
+        ...(preset.api_format ? { ai_api_format: preset.api_format } : {}),
       }))
+    } else {
+      setEdits((e) => ({ ...e, ai_provider: provider }))
     }
   }
 
@@ -197,9 +200,19 @@ export default function Settings() {
                            p.key === 'openrouter' ? 'OpenRouter' :
                            p.key === 'dashscope' ? '阿里云 DashScope（通义千问）' :
                            p.key === 'deepseek' ? 'DeepSeek' :
-                           p.key === 'openai' ? 'OpenAI' : p.key}
+                           p.key === 'openai' ? 'OpenAI' :
+                           p.key === 'minimax' ? 'MiniMax' : p.key}
                         </option>
                       ))}
+                    </select>
+                  ) : item.key === 'ai_api_format' ? (
+                    <select
+                      value={edits[item.key] ?? 'openai'}
+                      onChange={(e) => setEdits((prev) => ({ ...prev, ai_api_format: e.target.value }))}
+                      className="w-full max-w-md px-3 py-2 rounded-lg border border-border text-sm"
+                    >
+                      <option value="openai">OpenAI 兼容格式</option>
+                      <option value="anthropic">Anthropic 格式（MiniMax 等）</option>
                     </select>
                   ) : (
                     <SettingField
@@ -283,11 +296,12 @@ function SettingField({
           className="w-full max-w-xs px-3 py-2 rounded-lg border border-border text-sm"
         />
       )
-    case 'password':
+    case 'password': {
+      const isMasked = value === '••••••••'
       return (
         <div className="relative max-w-md">
           <input
-            type={showPassword ? 'text' : 'password'}
+            type={showPassword && !isMasked ? 'text' : 'password'}
             value={value}
             onChange={(e) => onChange(e.target.value)}
             placeholder={item.has_value ? '已设置（留空不修改）' : '未设置'}
@@ -295,13 +309,15 @@ function SettingField({
           />
           <button
             type="button"
-            onClick={onTogglePassword}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text"
+            onClick={isMasked ? undefined : onTogglePassword}
+            disabled={isMasked}
+            className={`absolute right-2 top-1/2 -translate-y-1/2 ${isMasked ? 'text-border cursor-not-allowed' : 'text-text-secondary hover:text-text'}`}
           >
-            {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPassword && !isMasked ? <EyeOff size={16} /> : <Eye size={16} />}
           </button>
         </div>
       )
+    }
     case 'json':
       return (
         <textarea
