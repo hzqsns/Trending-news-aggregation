@@ -40,7 +40,7 @@ PROVIDER_PRESETS = {
     },
     "minimax": {
         "api_base": "https://api.minimax.io/anthropic",
-        "default_model": "MiniMax-M2.7",
+        "default_model": "MiniMax-Text-01",
         "api_format": "anthropic",
     },
 }

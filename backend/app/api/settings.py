@@ -55,24 +55,36 @@ async def test_ai_connection(
     if not config["api_key"]:
         return {"success": False, "message": "未配置 API Key"}
 
-    url = f"{config['api_base'].rstrip('/')}/chat/completions"
-    payload = {
-        "model": config["model"],
-        "messages": [{"role": "user", "content": "Hi, reply with 'ok' only."}],
-        "temperature": 0,
-        "max_tokens": 100,
-    }
+    messages = [{"role": "user", "content": "Hi, reply with 'ok' only."}]
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
-            resp = await client.post(
-                url,
-                json=payload,
-                headers={
+            if config["api_format"] == "anthropic":
+                url = f"{config['api_base'].rstrip('/')}/v1/messages"
+                payload = {
+                    "model": config["model"],
+                    "messages": messages,
+                    "max_tokens": 100,
+                }
+                headers = {
+                    "x-api-key": config["api_key"],
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                }
+            else:
+                url = f"{config['api_base'].rstrip('/')}/chat/completions"
+                payload = {
+                    "model": config["model"],
+                    "messages": messages,
+                    "temperature": 0,
+                    "max_tokens": 100,
+                }
+                headers = {
                     "Authorization": f"Bearer {config['api_key']}",
                     "Content-Type": "application/json",
-                },
-            )
+                }
+
+            resp = await client.post(url, json=payload, headers=headers)
             if resp.status_code == 200:
                 return {
                     "success": True,
