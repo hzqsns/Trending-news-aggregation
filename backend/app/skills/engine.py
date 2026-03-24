@@ -162,6 +162,86 @@ async def generate_daily_report(report_type: str = "morning"):
         logger.info(f"Generated {report_type} report for {today}")
 
 
+def _extract_handle(title: str) -> str:
+    """从 '@handle: ...' 格式标题中提取 handle。"""
+    if title.startswith("@") and ": " in title:
+        return title.split(": ", 1)[0][1:]
+    return "unknown"
+
+
+async def generate_twitter_digest() -> bool:
+    """生成 Twitter 博主观点日报，存入 daily_reports 表（report_type='twitter_digest'）。"""
+    async with async_session() as session:
+        since = datetime.utcnow() - timedelta(hours=24)
+        result = await session.execute(
+            select(Article)
+            .where(Article.category == "twitter")
+            .where(Article.published_at >= since)
+            .order_by(desc(Article.published_at))
+        )
+        articles = result.scalars().all()
+
+    if not articles:
+        logger.info("Twitter digest: no tweets in last 24h, skipping")
+        return False
+
+    # 按 handle 分组（从 title "@handle: ..." 提取）
+    handle_map: dict[str, list[str]] = {}
+    for a in articles:
+        handle = _extract_handle(a.title)
+        content = a.content or a.summary or a.title
+        handle_map.setdefault(handle, []).append(content)
+
+    handles_text = ""
+    for handle, tweets in handle_map.items():
+        handles_text += f"\n### @{handle}\n"
+        handles_text += "\n".join(f"- {t[:300]}" for t in tweets[:15])
+
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "你是投研助手。请根据以下追踪博主的推文，生成结构化的观点日报。\n"
+                "格式要求（严格按 Markdown）：\n"
+                "- 每位博主用二级标题（## @handle），列出 3-5 条核心观点（bullet）\n"
+                "- 最后加 ## 综合主题，总结所有博主的共同信号和分歧点\n"
+                "- 语言：中文，简洁专业"
+            ),
+        },
+        {"role": "user", "content": f"今日追踪博主推文（最近24小时）：\n{handles_text}"},
+    ]
+
+    content = await chat_completion(messages, max_tokens=2000, temperature=0.4)
+    if not content:
+        logger.warning("Twitter digest: AI returned empty content")
+        return False
+
+    today = datetime.utcnow().date()
+    async with async_session() as session:
+        existing = (await session.execute(
+            select(DailyReport)
+            .where(DailyReport.report_type == "twitter_digest")
+            .where(DailyReport.report_date == today)
+        )).scalar_one_or_none()
+
+        if existing:
+            existing.content = content
+            existing.title = f"{today.isoformat()} 推特博主观点日报"
+        else:
+            report = DailyReport(
+                report_type="twitter_digest",
+                report_date=today,
+                title=f"{today.isoformat()} 推特博主观点日报",
+                content=content,
+                key_events=[],
+            )
+            session.add(report)
+        await session.commit()
+
+    logger.info(f"Twitter digest generated: {len(handle_map)} handles, {len(articles)} tweets")
+    return True
+
+
 async def run_anomaly_detection():
     """Check for anomalies based on recent high-importance news."""
     async with async_session() as session:

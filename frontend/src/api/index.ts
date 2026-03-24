@@ -19,6 +19,9 @@ export const reportsApi = {
   latest: (type?: string) => client.get('/reports/latest', { params: { report_type: type } }),
   get: (id: number) => client.get(`/reports/${id}`),
   generate: (report_type: 'morning' | 'evening') => client.post('/reports/generate', { report_type }),
+  listByType: (report_type: string, page_size = 7) =>
+    client.get('/reports/', { params: { report_type, page_size } }),
+  generateTwitterDigest: () => client.post('/reports/generate-twitter-digest'),
 }
 
 export const alertsApi = {
@@ -51,6 +54,24 @@ export const twitterApi = {
   manualFetch: () => client.post('/twitter/fetch'),
   testAuth: () => client.post('/twitter/test-auth'),
   importCookies: (cookies: string) => client.post('/twitter/import-cookies', { cookies }),
+}
+
+export const calendarApi = {
+  list: (params: { start?: string; end?: string; event_type?: string; days?: number } = {}) =>
+    client.get('/calendar/', { params }),
+  create: (data: {
+    title: string
+    event_type: string
+    event_date: string
+    event_time?: string
+    description?: string
+    importance?: string
+    meta?: Record<string, unknown>
+  }) => client.post('/calendar/', data),
+  update: (id: number, data: Partial<{ title: string; event_date: string; event_time: string; description: string; importance: string }>) =>
+    client.put(`/calendar/${id}`, data),
+  remove: (id: number) => client.delete(`/calendar/${id}`),
+  seed: () => client.post('/calendar/seed'),
 }
 
 export const bookmarksApi = {

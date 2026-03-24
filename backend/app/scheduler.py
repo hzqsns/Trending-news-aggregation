@@ -9,7 +9,7 @@ from app.models.article import Article
 from app.models.setting import SystemSetting
 from app.sources.manager import fetch_all_sources
 from app.sources.twitter import TwitterSource
-from app.skills.engine import run_importance_scoring, generate_daily_report, run_anomaly_detection
+from app.skills.engine import run_importance_scoring, generate_daily_report, run_anomaly_detection, generate_twitter_digest
 from app.notifiers.manager import push_important_news, push_news_digest
 
 logger = logging.getLogger(__name__)
@@ -88,6 +88,13 @@ async def job_cleanup():
         logger.error(f"Cleanup job error: {e}")
 
 
+async def job_twitter_digest():
+    try:
+        await generate_twitter_digest()
+    except Exception as e:
+        logger.error(f"Twitter digest job error: {e}")
+
+
 async def job_fetch_twitter():
     logger.info("⏰ Running scheduled twitter fetch")
     try:
@@ -119,6 +126,7 @@ def start_scheduler():
     scheduler.add_job(job_evening_report, "cron", hour=22, minute=0, id="evening_report", replace_existing=True)
     scheduler.add_job(job_cleanup, "cron", hour=3, minute=0, id="cleanup", replace_existing=True)
     scheduler.add_job(job_fetch_twitter, "interval", minutes=30, id="fetch_twitter", replace_existing=True)
+    scheduler.add_job(job_twitter_digest, "cron", hour=9, minute=0, id="twitter_digest", replace_existing=True)
     scheduler.start()
     logger.info("Scheduler started with all jobs")
 

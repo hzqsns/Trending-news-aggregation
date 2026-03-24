@@ -67,6 +67,31 @@ async def generate_report(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/generate-twitter-digest")
+async def generate_twitter_digest_report(
+    session: AsyncSession = Depends(get_session),
+    _=Depends(get_current_user),
+):
+    """手动触发生成 Twitter 博主观点日报"""
+    try:
+        from app.skills.engine import generate_twitter_digest
+        ok = await generate_twitter_digest()
+        if not ok:
+            raise HTTPException(status_code=400, detail="近24小时无推特数据，请先确保推特追踪已启用并有采集记录")
+        from datetime import datetime as dt
+        today = dt.utcnow().date()
+        report = (await session.execute(
+            select(DailyReport)
+            .where(DailyReport.report_type == "twitter_digest")
+            .where(DailyReport.report_date == today)
+        )).scalar_one_or_none()
+        return report.to_dict() if report else {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/{report_id}")
 async def get_report(
     report_id: int,

@@ -12,6 +12,7 @@ from app.models.user import User
 from app.models.setting import SystemSetting, DEFAULT_SETTINGS
 from app.models.skill import Skill
 from app.models.bookmark import ArticleBookmark  # noqa: F401
+from app.models.calendar_event import CalendarEvent  # noqa: F401
 from app.api.router import api_router
 from app.scheduler import start_scheduler, stop_scheduler
 

@@ -1,8 +1,19 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, RefreshCw, ExternalLink, AtSign, CheckCircle, XCircle, Loader } from 'lucide-react'
-import { twitterApi, settingsApi } from '@/api'
+import { Plus, Trash2, RefreshCw, ExternalLink, AtSign, CheckCircle, XCircle, Loader, FileText, Zap } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
+import { twitterApi, settingsApi, reportsApi } from '@/api'
+
+interface DigestReport {
+  id: number
+  title: string
+  content: string
+  report_date: string
+  created_at: string
+}
 
 export default function TwitterTracking() {
+  const [activeTab, setActiveTab] = useState<'handles' | 'digest'>('handles')
   const [handles, setHandles] = useState<string[]>([])
   const [newHandle, setNewHandle] = useState('')
   const [loading, setLoading] = useState(true)
@@ -14,6 +25,12 @@ export default function TwitterTracking() {
   const [cookieJson, setCookieJson] = useState('')
   const [importingCookies, setImportingCookies] = useState(false)
   const [cookieStatus, setCookieStatus] = useState<{ ok: boolean; message: string } | null>(null)
+  // 观点日报 tab
+  const [digests, setDigests] = useState<DigestReport[]>([])
+  const [digestLoading, setDigestLoading] = useState(false)
+  const [generatingDigest, setGeneratingDigest] = useState(false)
+  const [digestResult, setDigestResult] = useState<string | null>(null)
+  const [expandedDigest, setExpandedDigest] = useState<number | null>(null)
 
   const loadHandles = async () => {
     try {
@@ -40,9 +57,27 @@ export default function TwitterTracking() {
     }
   }
 
+  const loadDigests = async () => {
+    setDigestLoading(true)
+    try {
+      const resp = await reportsApi.listByType('twitter_digest', 7)
+      setDigests(resp.data)
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setDigestLoading(false)
+    }
+  }
+
   useEffect(() => {
     Promise.all([loadHandles(), loadSettings()]).finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    if (activeTab === 'digest' && digests.length === 0) {
+      loadDigests()
+    }
+  }, [activeTab])
 
   const addHandle = async () => {
     const h = newHandle.trim().replace(/^@/, '')
@@ -85,11 +120,24 @@ export default function TwitterTracking() {
     setSavingSettings(true)
     try {
       await settingsApi.batchUpdate(settings)
-      setAuthStatus(null) // 配置变更后重置连接状态
     } catch (e) {
       console.error(e)
     } finally {
       setSavingSettings(false)
+    }
+  }
+
+  const generateDigest = async () => {
+    setGeneratingDigest(true)
+    setDigestResult(null)
+    try {
+      await reportsApi.generateTwitterDigest()
+      setDigestResult('生成成功！')
+      await loadDigests()
+    } catch (e: any) {
+      setDigestResult(`生成失败：${e.response?.data?.detail || e.message}`)
+    } finally {
+      setGeneratingDigest(false)
     }
   }
 
@@ -116,22 +164,98 @@ export default function TwitterTracking() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-bold">推特博主追踪</h2>
+        {activeTab === 'handles' ? (
+          <button
+            onClick={manualFetch}
+            disabled={fetching || handles.length === 0}
+            className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={fetching ? 'animate-spin' : ''} />
+            {fetching ? '采集中...' : '立即采集'}
+          </button>
+        ) : (
+          <button
+            onClick={generateDigest}
+            disabled={generatingDigest}
+            className="flex items-center gap-1.5 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+          >
+            <Zap size={16} className={generatingDigest ? 'animate-pulse' : ''} />
+            {generatingDigest ? '生成中...' : '立即生成日报'}
+          </button>
+        )}
+      </div>
+
+      {/* Tab 切换 */}
+      <div className="flex gap-1 mb-6 bg-card rounded-xl p-1 border border-border w-fit">
         <button
-          onClick={manualFetch}
-          disabled={fetching || handles.length === 0}
-          className="flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-lg text-sm transition-colors disabled:opacity-50"
+          onClick={() => setActiveTab('handles')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-colors ${activeTab === 'handles' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'}`}
         >
-          <RefreshCw size={16} className={fetching ? 'animate-spin' : ''} />
-          {fetching ? '采集中...' : '立即采集'}
+          <AtSign size={15} />
+          博主管理
+        </button>
+        <button
+          onClick={() => setActiveTab('digest')}
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm transition-colors ${activeTab === 'digest' ? 'bg-primary text-white' : 'text-text-secondary hover:text-text'}`}
+        >
+          <FileText size={15} />
+          观点日报
         </button>
       </div>
 
-      {fetchResult && (
+      {fetchResult && activeTab === 'handles' && (
         <div className="mb-4 p-3 bg-card border border-border rounded-lg text-sm">
           {fetchResult}
         </div>
       )}
 
+      {digestResult && activeTab === 'digest' && (
+        <div className={`mb-4 p-3 border rounded-lg text-sm ${digestResult.startsWith('生成成功') ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-700 dark:text-red-400'}`}>
+          {digestResult}
+        </div>
+      )}
+
+      {/* 观点日报 Tab */}
+      {activeTab === 'digest' && (
+        <div className="space-y-4">
+          {digestLoading ? (
+            <div className="p-8 text-center text-text-secondary">加载中...</div>
+          ) : digests.length === 0 ? (
+            <div className="bg-card rounded-xl border border-border p-12 text-center">
+              <FileText size={40} className="mx-auto mb-3 text-text-secondary opacity-40" />
+              <p className="text-text-secondary text-sm">暂无观点日报</p>
+              <p className="text-text-secondary text-xs mt-1">点击右上角"立即生成日报"，或等待每天09:00自动生成</p>
+            </div>
+          ) : (
+            digests.map((report) => (
+              <div key={report.id} className="bg-card rounded-xl border border-border overflow-hidden">
+                <button
+                  onClick={() => setExpandedDigest(expandedDigest === report.id ? null : report.id)}
+                  className="w-full p-5 flex items-center justify-between hover:bg-bg transition-colors text-left"
+                >
+                  <div>
+                    <div className="font-semibold text-sm">{report.title}</div>
+                    <div className="text-xs text-text-secondary mt-0.5">
+                      {new Date(report.created_at).toLocaleString('zh-CN')}
+                    </div>
+                  </div>
+                  <span className="text-text-secondary text-xs ml-4">{expandedDigest === report.id ? '收起 ▲' : '展开 ▼'}</span>
+                </button>
+                {expandedDigest === report.id && (
+                  <div className="px-5 pb-5 border-t border-border">
+                    <div className="prose prose-sm max-w-none dark:prose-invert pt-4 text-sm">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.content}</ReactMarkdown>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* 博主管理 Tab */}
+      {activeTab === 'handles' && <>
       {/* 博主列表 */}
       <div className="bg-card rounded-xl border border-border mb-6">
         <div className="p-5 border-b border-border">
@@ -268,6 +392,7 @@ export default function TwitterTracking() {
           </button>
         </div>
       </div>
+      </>}
     </div>
   )
 }
