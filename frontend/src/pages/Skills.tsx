@@ -165,10 +165,10 @@ function SkillCard({ skill, expanded, onToggleExpand, onToggle, onDelete }: {
           <div key={i} className="flex items-start gap-2 text-xs">
             <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-primary mt-1.5" />
             <span className="text-text-secondary">
-              <span className="font-medium text-text">{(ind.name || ind.indicator || ind.condition) as string}</span>
-              {ind.warning && <span> — {ind.warning as string}</span>}
-              {ind.condition && ind.name && <span> — {ind.condition as string}</span>}
-              {ind.weight && <span className="ml-1 text-primary">(权重 {ind.weight as number}%)</span>}
+              <span className="font-medium text-text">{String(ind.name || ind.indicator || ind.condition || '')}</span>
+              {!!ind.warning && <span> — {String(ind.warning)}</span>}
+              {!!(ind.condition && ind.name) && <span> — {String(ind.condition)}</span>}
+              {!!ind.weight && <span className="ml-1 text-primary">(权重 {Number(ind.weight)}%)</span>}
             </span>
           </div>
         ))}

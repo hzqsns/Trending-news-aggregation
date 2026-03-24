@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Newspaper, AlertTriangle, TrendingUp, BarChart3, RefreshCw } from 'lucide-react'
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { dashboardApi, articlesApi } from '@/api'
 import { useNewsSocket } from '@/hooks/useNewsSocket'
@@ -153,7 +153,7 @@ export default function Dashboard() {
                 <Tooltip
                   contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }}
                   labelFormatter={(l) => `${l}`}
-                  formatter={(v: number) => [`${v} 条`, '新闻数']}
+                  formatter={(v: string | number | undefined) => [`${v ?? 0} 条`, '新闻数'] as [string, string]}
                 />
                 <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               </BarChart>
@@ -180,7 +180,7 @@ export default function Dashboard() {
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: 'var(--color-text-secondary)' }} />
                 <Tooltip
                   contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [`${v}`, '情绪指数']}
+                  formatter={(v: string | number | undefined) => [`${v ?? 0}`, '情绪指数'] as [string, string]}
                 />
                 <Area type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} fill="url(#sentimentGrad)" />
               </AreaChart>
@@ -203,7 +203,7 @@ export default function Dashboard() {
                   data={stats.sources.map((s) => ({ name: s.source, value: s.count }))}
                   cx="50%" cy="50%" innerRadius={50} outerRadius={90}
                   paddingAngle={2} dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: { name?: string; percent?: number }) => `${name ?? ''} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 >
                   {stats.sources.map((_, i) => (
                     <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
@@ -211,7 +211,7 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip
                   contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [`${v} 条`, '新闻数']}
+                  formatter={(v: string | number | undefined) => [`${v ?? 0} 条`, '新闻数'] as [string, string]}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -231,7 +231,7 @@ export default function Dashboard() {
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 12, fill: 'var(--color-text-secondary)' }} width={70} />
                 <Tooltip
                   contentStyle={{ background: 'var(--color-card)', border: '1px solid var(--color-border)', borderRadius: 8, fontSize: 12 }}
-                  formatter={(v: number) => [`${v} 条`, '新闻数']}
+                  formatter={(v: string | number | undefined) => [`${v ?? 0} 条`, '新闻数'] as [string, string]}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]}>
                   {pieData.map((_, i) => (
