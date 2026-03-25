@@ -164,6 +164,17 @@ async def chat_completion(
         return None
 
 
+def _extract_json_text(text: str) -> str:
+    """Strip markdown code fences if the model wraps JSON in ```json ... ```."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        # drop first line (``` or ```json) and last line (```)
+        inner = lines[1:-1] if lines[-1].strip() == "```" else lines[1:]
+        text = "\n".join(inner).strip()
+    return text
+
+
 async def chat_completion_json(
     messages: list[dict],
     temperature: float = 0.3,
@@ -177,7 +188,7 @@ async def chat_completion_json(
     )
     if result:
         try:
-            return json.loads(result)
+            return json.loads(_extract_json_text(result))
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse AI JSON response: {result[:200]}")
+            logger.error(f"Failed to parse AI JSON response: {result[:300]}")
     return None

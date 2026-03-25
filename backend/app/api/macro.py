@@ -197,18 +197,27 @@ async def get_analysis(force: bool = False, session: AsyncSession = Depends(get_
     indicators_text = "\n".join(lines)
     prompt = _ANALYSIS_PROMPT.format(indicators_text=indicators_text)
 
+    # Check AI config before calling
+    from app.ai.client import _get_ai_config
+    config = await _get_ai_config()
+    if not config.get("enabled") or not config.get("api_key"):
+        return {"error": "AI 未配置或未启用，请前往「系统设置」配置 AI 服务商和 API Key", "cached": False}
+
     try:
         result = await chat_completion_json(
             [{"role": "user", "content": prompt}],
             max_tokens=800,
             temperature=0.3,
         )
-        if not result or "impacts" not in result:
-            return {"error": "AI 分析生成失败，请稍后重试", "cached": False}
+        if not result:
+            return {"error": "AI 调用失败或返回空响应，请检查 API Key 是否有效、模型是否支持 JSON 输出", "cached": False}
+        if "impacts" not in result:
+            logger.warning(f"Macro analysis missing 'impacts' key: {result}")
+            return {"error": f"AI 返回格式异常（缺少 impacts 字段），原始响应已记录到日志", "cached": False}
 
         result["generated_at"] = datetime.utcnow().isoformat()
         _analysis_cache = (result, datetime.utcnow() + timedelta(hours=6))
         return {**result, "cached": False}
     except Exception as e:
-        logger.error(f"Macro analysis failed: {e}")
-        return {"error": f"AI 分析失败: {str(e)}", "cached": False}
+        logger.error(f"Macro analysis failed: {e}", exc_info=True)
+        return {"error": f"AI 分析异常: {str(e)}", "cached": False}
