@@ -85,3 +85,23 @@ export const bookmarksApi = {
   status: (article_ids: number[]) =>
     client.get('/bookmarks/status', { params: { article_ids: article_ids.join(',') } }),
 }
+
+export const macroApi = {
+  getAll: () => client.get('/macro/indicators'),
+  refresh: () => client.post('/macro/refresh'),
+}
+
+export const historicalEventsApi = {
+  list: (params: { category?: string; search?: string } = {}) =>
+    client.get('/historical-events/', { params }),
+  create: (data: {
+    title: string
+    category: string
+    date_range: string
+    market_impact: string
+    description?: string
+    key_metrics?: Array<{ label: string; value: string }>
+  }) => client.post('/historical-events/', data),
+  remove: (id: number) => client.delete(`/historical-events/${id}`),
+  seed: () => client.post('/historical-events/seed'),
+}

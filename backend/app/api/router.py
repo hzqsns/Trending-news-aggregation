@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import auth_routes, articles, bookmarks, dashboard, settings, reports, alerts, skills, ws, twitter, calendar
+from app.api import auth_routes, articles, bookmarks, dashboard, settings, reports, alerts, skills, ws, twitter, calendar, macro, historical_events
 
 api_router = APIRouter(prefix="/api")
 api_router.include_router(auth_routes.router, prefix="/auth", tags=["Auth"])
@@ -13,4 +13,6 @@ api_router.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])
 api_router.include_router(skills.router, prefix="/skills", tags=["Skills"])
 api_router.include_router(twitter.router, prefix="/twitter", tags=["Twitter"])
 api_router.include_router(calendar.router, prefix="/calendar", tags=["Calendar"])
+api_router.include_router(macro.router, prefix="/macro", tags=["Macro"])
+api_router.include_router(historical_events.router, prefix="/historical-events", tags=["HistoricalEvents"])
 api_router.include_router(ws.router, tags=["WebSocket"])

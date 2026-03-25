@@ -11,6 +11,8 @@ import Settings from '@/pages/Settings'
 import TwitterTracking from '@/pages/TwitterTracking'
 import Bookmarks from '@/pages/Bookmarks'
 import Calendar from '@/pages/Calendar'
+import MacroIndicators from '@/pages/MacroIndicators'
+import HistoricalEvents from '@/pages/HistoricalEvents'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -39,6 +41,8 @@ export default function App() {
           <Route path="/twitter" element={<TwitterTracking />} />
           <Route path="/bookmarks" element={<Bookmarks />} />
           <Route path="/calendar" element={<Calendar />} />
+          <Route path="/macro" element={<MacroIndicators />} />
+          <Route path="/historical-events" element={<HistoricalEvents />} />
         </Route>
       </Routes>
     </BrowserRouter>
