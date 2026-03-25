@@ -89,6 +89,7 @@ export const bookmarksApi = {
 export const macroApi = {
   getAll: () => client.get('/macro/indicators'),
   refresh: () => client.post('/macro/refresh'),
+  getAnalysis: (force = false) => client.get('/macro/analysis', { params: { force } }),
 }
 
 export const historicalEventsApi = {

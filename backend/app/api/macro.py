@@ -1,19 +1,24 @@
 import csv
 import io
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from typing import Optional
 
 import httpx
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.ai.client import chat_completion_json
 from app.auth import get_current_user
 from app.database import get_session
 from app.models.macro_indicator import MacroDataPoint
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+# In-memory cache: (result_dict, expires_at)
+_analysis_cache: tuple[Optional[dict], Optional[datetime]] = (None, None)
 
 FRED_BASE = "https://fred.stlouisfed.org/graph/fredgraph.csv?id="
 
@@ -143,3 +148,67 @@ async def refresh_indicators(session: AsyncSession = Depends(get_session)):
             totals[series_id] = 0
 
     return {"updated": sum(totals.values()), "series": totals}
+
+
+_ANALYSIS_PROMPT = """你是专业的宏观经济分析师。根据以下最新美国宏观指标数据，生成投资分析。
+
+当前指标：
+{indicators_text}
+
+请以 JSON 格式返回分析结果，严格遵循以下结构（不要添加任何额外字段）：
+{{
+  "environment": "宽松" | "中性" | "偏紧" | "紧缩",
+  "summary": "2-3句话概括当前宏观环境及主要驱动因素",
+  "impacts": [
+    {{"asset": "美股", "direction": "bullish" | "bearish" | "neutral", "reason": "一句话说明原因"}},
+    {{"asset": "美债", "direction": "bullish" | "bearish" | "neutral", "reason": "一句话说明原因"}},
+    {{"asset": "黄金", "direction": "bullish" | "bearish" | "neutral", "reason": "一句话说明原因"}},
+    {{"asset": "加密货币", "direction": "bullish" | "bearish" | "neutral", "reason": "一句话说明原因"}},
+    {{"asset": "美元", "direction": "bullish" | "bearish" | "neutral", "reason": "一句话说明原因"}}
+  ]
+}}"""
+
+
+@router.get("/analysis", dependencies=[Depends(get_current_user)])
+async def get_analysis(force: bool = False, session: AsyncSession = Depends(get_session)):
+    global _analysis_cache
+    cached_result, expires_at = _analysis_cache
+
+    if not force and cached_result and expires_at and datetime.utcnow() < expires_at:
+        return {**cached_result, "cached": True}
+
+    # Gather latest values from DB
+    lines = []
+    for series_id, meta in FRED_SERIES.items():
+        row = await session.scalar(
+            select(MacroDataPoint)
+            .where(MacroDataPoint.series_id == series_id)
+            .order_by(MacroDataPoint.data_date.desc())
+            .limit(1)
+        )
+        if row and row.value is not None:
+            date_str = row.data_date.isoformat() if row.data_date else "N/A"
+            mom_str = f", MoM {row.mom:+.2f}{meta['unit']}" if row.mom is not None else ""
+            lines.append(f"- {meta['label']}（{series_id}）: {row.value}{meta['unit']} [{date_str}]{mom_str}")
+
+    if not lines:
+        return {"error": "暂无宏观数据，请先刷新数据", "cached": False}
+
+    indicators_text = "\n".join(lines)
+    prompt = _ANALYSIS_PROMPT.format(indicators_text=indicators_text)
+
+    try:
+        result = await chat_completion_json(
+            [{"role": "user", "content": prompt}],
+            max_tokens=800,
+            temperature=0.3,
+        )
+        if not result or "impacts" not in result:
+            return {"error": "AI 分析生成失败，请稍后重试", "cached": False}
+
+        result["generated_at"] = datetime.utcnow().isoformat()
+        _analysis_cache = (result, datetime.utcnow() + timedelta(hours=6))
+        return {**result, "cached": False}
+    except Exception as e:
+        logger.error(f"Macro analysis failed: {e}")
+        return {"error": f"AI 分析失败: {str(e)}", "cached": False}
