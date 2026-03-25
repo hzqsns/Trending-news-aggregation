@@ -15,6 +15,7 @@ from app.models.bookmark import ArticleBookmark  # noqa: F401
 from app.models.calendar_event import CalendarEvent  # noqa: F401
 from app.models.macro_indicator import MacroDataPoint  # noqa: F401
 from app.models.historical_event import HistoricalEvent  # noqa: F401
+from app.api.historical_events import _BUILTIN_EVENTS
 from app.api.router import api_router
 from app.scheduler import start_scheduler, stop_scheduler
 
@@ -195,6 +196,21 @@ async def _init_builtin_skills():
         await session.commit()
 
 
+async def _init_historical_events():
+    from datetime import datetime
+    async with async_session() as session:
+        for data in _BUILTIN_EVENTS:
+            existing = await session.scalar(
+                select(HistoricalEvent).where(
+                    HistoricalEvent.title == data["title"],
+                    HistoricalEvent.is_builtin.is_(True),
+                )
+            )
+            if not existing:
+                session.add(HistoricalEvent(**data, is_builtin=True, created_at=datetime.utcnow()))
+        await session.commit()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 Starting News Agent...")
@@ -202,6 +218,7 @@ async def lifespan(app: FastAPI):
     await _init_admin_user()
     await _init_settings()
     await _init_builtin_skills()
+    await _init_historical_events()
     start_scheduler()
     logger.info("✅ News Agent is ready")
     yield

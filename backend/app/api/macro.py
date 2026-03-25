@@ -5,8 +5,7 @@ from datetime import date, datetime
 
 import httpx
 from fastapi import APIRouter, Depends
-from sqlalchemy import select, delete
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_current_user
@@ -51,6 +50,10 @@ async def _fetch_and_store_series(series_id: str, session: AsyncSession) -> int:
     if not parsed:
         return 0
 
+    # Wipe existing data for this series and re-insert cleanly
+    from sqlalchemy import delete as sa_delete
+    await session.execute(sa_delete(MacroDataPoint).where(MacroDataPoint.series_id == series_id))
+
     date_to_val = {d: v for d, v in parsed}
     count = 0
 
@@ -63,33 +66,15 @@ async def _fetch_and_store_series(series_id: str, session: AsyncSession) -> int:
             if prev_year in date_to_val:
                 yoy = round((v / date_to_val[prev_year] - 1) * 100, 2)
 
-        try:
-            point = MacroDataPoint(
-                series_id=series_id,
-                data_date=d,
-                value=round(v, 4),
-                yoy=yoy,
-                mom=mom,
-                fetched_at=datetime.utcnow(),
-            )
-            session.add(point)
-            await session.flush()
-            count += 1
-        except IntegrityError:
-            await session.rollback()
-            # Update existing
-            existing = await session.scalar(
-                select(MacroDataPoint).where(
-                    MacroDataPoint.series_id == series_id,
-                    MacroDataPoint.data_date == d,
-                )
-            )
-            if existing:
-                existing.value = round(v, 4)
-                existing.yoy = yoy
-                existing.mom = mom
-                existing.fetched_at = datetime.utcnow()
-                count += 1
+        session.add(MacroDataPoint(
+            series_id=series_id,
+            data_date=d,
+            value=round(v, 4),
+            yoy=yoy,
+            mom=mom,
+            fetched_at=datetime.utcnow(),
+        ))
+        count += 1
 
     await session.commit()
     return count

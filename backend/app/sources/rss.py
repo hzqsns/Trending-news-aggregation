@@ -10,62 +10,67 @@ from app.sources.base import NewsSource, NewsItem
 logger = logging.getLogger(__name__)
 
 DEFAULT_RSS_FEEDS = [
-    # --- 中文财经 ---
-    {
-        "name": "新浪财经",
-        "url": "https://finance.sina.com.cn/rss/economy.xml",
-        "category": "a_stock",
-    },
-    {
-        "name": "华尔街见闻",
-        "url": "https://wallstreetcn.com/rss",
-        "category": "global",
-    },
-    {
-        "name": "36氪",
-        "url": "https://36kr.com/feed",
-        "category": "tech",
-    },
-    {
-        "name": "金十数据",
-        "url": "https://rsshub.app/jin10",
-        "category": "global",
-    },
-    {
-        "name": "东方财富",
-        "url": "https://rsshub.app/eastmoney/report/stock",
-        "category": "a_stock",
-    },
-    {
-        "name": "FT中文网",
-        "url": "https://rsshub.app/ft/chinese/hotstoryby7day",
-        "category": "global",
-    },
-    # --- 国际财经 ---
-    {
-        "name": "CoinDesk",
-        "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
-        "category": "crypto",
-    },
+    # --- 国际财经（一手）---
     {
         "name": "Reuters Business",
-        "url": "https://www.reutersagency.com/feed/?best-topics=business-finance",
+        "url": "https://feeds.reuters.com/reuters/businessNews",
         "category": "global",
     },
     {
-        "name": "CNBC",
+        "name": "Reuters Markets",
+        "url": "https://feeds.reuters.com/reuters/financialNews",
+        "category": "global",
+    },
+    {
+        "name": "CNBC Finance",
         "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
         "category": "global",
     },
     {
-        "name": "Bloomberg",
-        "url": "https://rsshub.app/bloomberg/markets",
+        "name": "CNBC Economy",
+        "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=20910258",
         "category": "global",
     },
     {
-        "name": "TechCrunch",
-        "url": "https://techcrunch.com/feed/",
-        "category": "tech",
+        "name": "WSJ Markets",
+        "url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+        "category": "global",
+    },
+    {
+        "name": "WSJ Economy",
+        "url": "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
+        "category": "global",
+    },
+    {
+        "name": "Financial Times",
+        "url": "https://www.ft.com/rss/home",
+        "category": "global",
+    },
+    {
+        "name": "The Guardian Business",
+        "url": "https://www.theguardian.com/business/rss",
+        "category": "global",
+    },
+    {
+        "name": "MarketWatch",
+        "url": "https://feeds.marketwatch.com/marketwatch/topstories/",
+        "category": "global",
+    },
+    {
+        "name": "AP Business",
+        "url": "https://feeds.apnews.com/rss/apf-business",
+        "category": "global",
+    },
+    {
+        "name": "Axios Markets",
+        "url": "https://api.axios.com/feed/",
+        "category": "global",
+    },
+    # --- 加密 ---
+    {
+        "name": "CoinDesk",
+        "url": "https://www.coindesk.com/arc/outboundfeeds/rss/",
+        "category": "crypto",
     },
     {
         "name": "The Block",
@@ -73,13 +78,35 @@ DEFAULT_RSS_FEEDS = [
         "category": "crypto",
     },
     {
-        "name": "SEC Filings",
-        "url": "https://rsshub.app/sec/latest",
-        "category": "a_stock",
+        "name": "CoinTelegraph",
+        "url": "https://cointelegraph.com/rss",
+        "category": "crypto",
+    },
+    # --- 科技 ---
+    {
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/",
+        "category": "tech",
     },
     {
         "name": "Hacker News",
         "url": "https://hnrss.org/frontpage",
+        "category": "tech",
+    },
+    # --- 中文财经 ---
+    {
+        "name": "华尔街见闻",
+        "url": "https://wallstreetcn.com/rss",
+        "category": "global",
+    },
+    {
+        "name": "新浪财经",
+        "url": "https://finance.sina.com.cn/rss/economy.xml",
+        "category": "a_stock",
+    },
+    {
+        "name": "36氪",
+        "url": "https://36kr.com/feed",
         "category": "tech",
     },
 ]
