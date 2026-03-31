@@ -13,6 +13,7 @@ import Bookmarks from '@/pages/Bookmarks'
 import Calendar from '@/pages/Calendar'
 import MacroIndicators from '@/pages/MacroIndicators'
 import HistoricalEvents from '@/pages/HistoricalEvents'
+import OpenAlicePage from '@/pages/OpenAlice'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/calendar" element={<Calendar />} />
           <Route path="/macro" element={<MacroIndicators />} />
           <Route path="/historical-events" element={<HistoricalEvents />} />
+          <Route path="/alice" element={<OpenAlicePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

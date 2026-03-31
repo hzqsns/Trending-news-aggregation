@@ -72,4 +72,7 @@ DEFAULT_SETTINGS = [
     {"key": "twitter_auth_password", "value": "", "category": "twitter", "label": "X 密码", "description": "小号的登录密码", "field_type": "password"},
     {"key": "twitter_handles", "value": "[]", "category": "twitter", "label": "追踪博主列表", "description": "JSON 数组，如 [\"elonmusk\", \"CathieDWood\"]", "field_type": "json"},
     {"key": "twitter_fetch_interval", "value": "30", "category": "twitter", "label": "采集间隔（分钟）", "description": "推特数据采集的时间间隔，建议 >= 30 以节省配额", "field_type": "number"},
+    # --- OpenAlice 集成 ---
+    {"key": "openalice_enabled", "value": "false", "category": "openalice", "label": "启用 OpenAlice", "description": "连接 OpenAlice AI 交易引擎（需要单独安装和启动）", "field_type": "boolean"},
+    {"key": "openalice_base_url", "value": "http://localhost:3002", "category": "openalice", "label": "OpenAlice 地址", "description": "OpenAlice 服务的 HTTP 地址", "field_type": "text"},
 ]

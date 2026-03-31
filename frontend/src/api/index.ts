@@ -106,3 +106,9 @@ export const historicalEventsApi = {
   remove: (id: number) => client.delete(`/historical-events/${id}`),
   seed: () => client.post('/historical-events/seed'),
 }
+
+export const aliceApi = {
+  status: () => client.get('/alice/status'),
+  ask: (message: string) => client.post('/alice/ask', { message }),
+  market: (path: string) => client.get(`/alice/market/${path}`),
+}

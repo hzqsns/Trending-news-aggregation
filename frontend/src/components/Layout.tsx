@@ -3,7 +3,7 @@ import { NavLink, Outlet } from 'react-router-dom'
 import {
   LayoutDashboard, Newspaper, FileText, AlertTriangle, Cpu,
   Settings, LogOut, Moon, Sun, Monitor, Menu, X, AtSign, Bookmark, CalendarDays,
-  TrendingUp, History,
+  TrendingUp, History, Bot,
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -18,6 +18,7 @@ const navItems = [
   { to: '/calendar', icon: CalendarDays, label: '金融日历' },
   { to: '/macro', icon: TrendingUp, label: '宏观指标' },
   { to: '/historical-events', icon: History, label: '历史事件库' },
+  { to: '/alice', icon: Bot, label: 'OpenAlice' },
   { to: '/twitter', icon: AtSign, label: '推特追踪' },
   { to: '/settings', icon: Settings, label: '系统设置' },
 ]
