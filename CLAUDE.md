@@ -258,3 +258,13 @@ SQLite 文件：`backend/data/news_agent.db`（首次启动自动创建）
 - **V2.2**: 结构化 Skill 定义 UI、Skill 回测
 - **V2.3**: 向量语义搜索、历史模式匹配、投资组合追踪、多信号融合告警
 - **V2.4**: 内容生产 Agent、AI 写作管线、多平台发布
+
+## .context 项目上下文
+
+> 项目使用 `.context/` 管理开发决策上下文。
+
+- 编码规范：`.context/prefs/coding-style.md`
+- 工作流规则：`.context/prefs/workflow.md`
+- 决策历史：`.context/history/commits.md`
+
+**规则**：修改代码前必读 prefs/，做决策时按 workflow.md 规则记录日志。
