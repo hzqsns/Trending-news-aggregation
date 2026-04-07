@@ -146,6 +146,10 @@ app.add_middleware(
 
 app.include_router(api_router)
 
+# Tech Info Agent routes
+from app.agents.tech_info.routes import router as tech_router  # noqa: E402
+app.include_router(tech_router)
+
 
 @app.get("/health")
 async def health():
