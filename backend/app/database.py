@@ -1,8 +1,7 @@
 import json
 import os
-from datetime import datetime
 
-from sqlalchemy import TypeDecorator, Text
+from sqlalchemy import TypeDecorator, Text, event
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
 
@@ -16,6 +15,16 @@ if db_dir and db_dir != ".":
 
 engine = create_async_engine(db_url, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@event.listens_for(engine.sync_engine, "connect")
+def _configure_sqlite_connection(dbapi_connection, _connection_record):
+    if not db_url.startswith("sqlite"):
+        return
+    cursor = dbapi_connection.cursor()
+    cursor.execute("PRAGMA journal_mode=WAL;")
+    cursor.execute("PRAGMA busy_timeout=5000;")
+    cursor.close()
 
 
 class Base(DeclarativeBase):
