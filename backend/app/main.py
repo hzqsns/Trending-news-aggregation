@@ -109,6 +109,7 @@ async def _init_historical_events():
 async def lifespan(app: FastAPI):
     logger.info("🚀 Starting News Agent...")
     register_investment_agent(agent_registry)
+    register_tech_info_agent(agent_registry)
     await init_db()
     await _init_admin_user()
     await _init_settings()
