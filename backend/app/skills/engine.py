@@ -273,6 +273,7 @@ async def run_anomaly_detection(agent_key: str = "investment"):
 
             level = "critical" if article.importance >= 5 else "high"
             alert = Alert(
+                agent_key=agent_key,
                 level=level,
                 title=article.title,
                 description=f"来源: {article.source}\n{article.summary or ''}",
