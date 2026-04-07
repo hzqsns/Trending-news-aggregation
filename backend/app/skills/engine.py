@@ -97,12 +97,13 @@ async def run_importance_scoring(agent_key: str = "investment"):
         logger.info(f"Scored {scored}/{len(articles)} articles in {-(-len(articles) // BATCH_SIZE)} batches")
 
 
-async def generate_daily_report(report_type: str = "morning"):
+async def generate_daily_report(report_type: str = "morning", agent_key: str = "investment"):
     """Generate a daily market report using AI."""
     async with async_session() as session:
         since = datetime.utcnow() - timedelta(hours=24 if report_type == "morning" else 12)
         result = await session.execute(
             select(Article)
+            .where(Article.agent_key == agent_key)
             .where(Article.fetched_at >= since)
             .where(Article.importance >= 2)
             .order_by(desc(Article.importance), desc(Article.published_at))
