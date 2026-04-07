@@ -74,13 +74,13 @@ export default function App() {
             <Route path="/invest/historical-events" element={<HistoricalEvents />} />
             <Route path="/invest/alice" element={<OpenAlicePage />} />
 
-            {/* Tech Info Agent routes (Phase 4 will add real pages) */}
+            {/* Tech Info Agent routes */}
             <Route path="/tech" element={<TechDashboard />} />
-            <Route path="/tech/github" element={<TechDashboard />} />
-            <Route path="/tech/hackernews" element={<TechDashboard />} />
-            <Route path="/tech/v2ex" element={<TechDashboard />} />
-            <Route path="/tech/linux-do" element={<TechDashboard />} />
-            <Route path="/tech/twitter" element={<TechDashboard />} />
+            <Route path="/tech/github" element={<GithubTrending />} />
+            <Route path="/tech/hackernews" element={<HackerNewsPage />} />
+            <Route path="/tech/v2ex" element={<V2exFeed />} />
+            <Route path="/tech/linux-do" element={<LinuxDoFeed />} />
+            <Route path="/tech/twitter" element={<TechTwitter />} />
 
             {/* Shared routes */}
             <Route path="/settings" element={<Settings />} />
