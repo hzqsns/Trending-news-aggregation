@@ -21,9 +21,14 @@ class SystemSetting(Base):
     field_type: Mapped[str] = mapped_column(String(20), default="text")
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    __table_args__ = (
+        UniqueConstraint("agent_key", "key", name="uq_settings_agent_key"),
+    )
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "agent_key": self.agent_key,
             "key": self.key,
             "value": self.value,
             "category": self.category,
