@@ -249,12 +249,13 @@ async def generate_twitter_digest() -> bool:
     return True
 
 
-async def run_anomaly_detection():
+async def run_anomaly_detection(agent_key: str = "investment"):
     """Check for anomalies based on recent high-importance news."""
     async with async_session() as session:
         since = datetime.utcnow() - timedelta(hours=1)
         result = await session.execute(
             select(Article)
+            .where(Article.agent_key == agent_key)
             .where(Article.fetched_at >= since)
             .where(Article.importance >= 4)
         )
