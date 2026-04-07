@@ -18,9 +18,14 @@ class SentimentSnapshot(Base):
     news_volume: Mapped[int] = mapped_column(Integer, default=0)
     top_keywords: Mapped[str | None] = mapped_column(Text, nullable=True)
 
+    __table_args__ = (
+        Index("ix_sentiment_agent_key", "agent_key"),
+    )
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "agent_key": self.agent_key,
             "snapshot_time": self.snapshot_time.isoformat() if self.snapshot_time else None,
             "overall_score": self.overall_score,
             "label": self.label,
