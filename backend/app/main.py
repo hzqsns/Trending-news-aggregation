@@ -7,6 +7,8 @@ from sqlalchemy import select
 
 from app.agents.investment import register_investment_agent
 from app.agents.investment.defaults import BUILTIN_SKILLS
+from app.agents.tech_info import register_tech_info_agent
+from app.agents.tech_info.defaults import BUILTIN_SKILLS as TECH_BUILTIN_SKILLS
 from app.config import settings
 from app.auth import hash_password
 from app.database import init_db, async_session
