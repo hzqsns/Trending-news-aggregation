@@ -82,10 +82,17 @@ async def _init_builtin_skills():
     async with async_session() as session:
         for skill_data in BUILTIN_SKILLS:
             existing = await session.execute(
-                select(Skill).where(Skill.slug == skill_data["slug"])
+                select(Skill).where(Skill.agent_key == "investment", Skill.slug == skill_data["slug"])
             )
             if not existing.scalar_one_or_none():
-                skill = Skill(is_builtin=True, **skill_data)
+                skill = Skill(agent_key="investment", is_builtin=True, **skill_data)
+                session.add(skill)
+        for skill_data in TECH_BUILTIN_SKILLS:
+            existing = await session.execute(
+                select(Skill).where(Skill.agent_key == "tech_info", Skill.slug == skill_data["slug"])
+            )
+            if not existing.scalar_one_or_none():
+                skill = Skill(agent_key="tech_info", is_builtin=True, **skill_data)
                 session.add(skill)
         await session.commit()
 
