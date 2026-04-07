@@ -27,6 +27,8 @@ class Article(Base):
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
+        UniqueConstraint("agent_key", "url", name="uq_articles_agent_url"),
+        Index("ix_articles_agent_key", "agent_key"),
         Index("ix_articles_category", "category"),
         Index("ix_articles_published_at", "published_at"),
         Index("ix_articles_source", "source"),
