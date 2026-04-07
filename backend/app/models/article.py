@@ -38,6 +38,7 @@ class Article(Base):
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "agent_key": self.agent_key,
             "title": self.title,
             "url": self.url,
             "source": self.source,
