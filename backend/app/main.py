@@ -5,6 +5,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 
+from app.agents.investment import register_investment_agent
+from app.agents.investment.defaults import BUILTIN_SKILLS
 from app.config import settings
 from app.auth import hash_password
 from app.database import init_db, async_session
@@ -17,6 +19,7 @@ from app.models.macro_indicator import MacroDataPoint  # noqa: F401
 from app.models.historical_event import HistoricalEvent  # noqa: F401
 from app.api.historical_events import _BUILTIN_EVENTS
 from app.api.router import api_router
+from app.platform.registry import agent_registry
 from app.scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(
