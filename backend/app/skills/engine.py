@@ -145,6 +145,7 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
         today = datetime.utcnow().date()
         existing = await session.execute(
             select(DailyReport)
+            .where(DailyReport.agent_key == agent_key)
             .where(DailyReport.report_type == report_type)
             .where(DailyReport.report_date == today)
         )
@@ -154,6 +155,7 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
             return existing_report
 
         report = DailyReport(
+            agent_key=agent_key,
             report_type=report_type,
             report_date=today,
             title=f"{today.isoformat()} {report_label}",
