@@ -69,3 +69,33 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _migrate_agent_key()
+
+
+_AGENT_KEY_TABLES = {
+    "articles": "investment",
+    "daily_reports": "investment",
+    "alerts": "investment",
+    "skills": "investment",
+    "sentiment_snapshots": "investment",
+    "system_settings": None,  # NULL = global
+}
+
+
+async def _migrate_agent_key():
+    """Add agent_key column to existing tables if missing (idempotent)."""
+    async with engine.begin() as conn:
+        for table, default_val in _AGENT_KEY_TABLES.items():
+            cols = await conn.execute(text(f"PRAGMA table_info({table})"))
+            col_names = [row[1] for row in cols.fetchall()]
+            if "agent_key" in col_names:
+                continue
+            if default_val is not None:
+                await conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN agent_key VARCHAR(50) DEFAULT '{default_val}' NOT NULL"
+                ))
+                logger.info(f"Migration: added agent_key to {table} (default='{default_val}')")
+            else:
+                await conn.execute(text(
+                    f"ALTER TABLE {table} ADD COLUMN agent_key VARCHAR(50) DEFAULT NULL"
+                ))
+                logger.info(f"Migration: added agent_key to {table} (nullable)")
