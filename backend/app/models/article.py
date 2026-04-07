@@ -10,8 +10,9 @@ class Article(Base):
     __tablename__ = "articles"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    agent_key: Mapped[str] = mapped_column(String(50), default="investment", nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
-    url: Mapped[str] = mapped_column(String(1000), nullable=False, unique=True)
+    url: Mapped[str] = mapped_column(String(1000), nullable=False)
     source: Mapped[str] = mapped_column(String(100), nullable=False)
     category: Mapped[str] = mapped_column(String(50), default="general")
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
