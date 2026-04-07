@@ -22,7 +22,8 @@ from app.models.historical_event import HistoricalEvent  # noqa: F401
 from app.api.historical_events import _BUILTIN_EVENTS
 from app.api.router import api_router
 from app.platform.registry import agent_registry
-from app.scheduler import start_scheduler, stop_scheduler
+from app.platform.scheduler import SchedulerKernel
+from app.scheduler import scheduler as _apscheduler
 
 logging.basicConfig(
     level=logging.INFO,
