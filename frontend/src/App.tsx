@@ -21,10 +21,13 @@ const MacroIndicators = lazy(() => import('@/pages/MacroIndicators'))
 const HistoricalEvents = lazy(() => import('@/pages/HistoricalEvents'))
 const OpenAlicePage = lazy(() => import('@/pages/OpenAlice'))
 
-// Tech Info Agent pages (placeholder until Phase 4)
-const TechDashboard = lazy(() =>
-  import('@/pages/Dashboard').then((m) => ({ default: m.default })),
-)
+// Tech Info Agent pages
+const TechDashboard = lazy(() => import('@/pages/tech/TechDashboard'))
+const GithubTrending = lazy(() => import('@/pages/tech/GithubTrending'))
+const HackerNewsPage = lazy(() => import('@/pages/tech/HackerNews'))
+const V2exFeed = lazy(() => import('@/pages/tech/V2exFeed'))
+const LinuxDoFeed = lazy(() => import('@/pages/tech/LinuxDoFeed'))
+const TechTwitter = lazy(() => import('@/pages/tech/TechTwitter'))
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
