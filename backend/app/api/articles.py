@@ -96,6 +96,7 @@ async def list_categories(
 ):
     result = await session.execute(
         select(Article.category, func.count(Article.id).label("count"))
+        .where(Article.agent_key == "investment")
         .group_by(Article.category)
     )
     return [{"category": row[0], "count": row[1]} for row in result.all()]
