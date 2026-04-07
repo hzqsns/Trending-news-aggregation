@@ -24,8 +24,8 @@ async def list_articles(
     session: AsyncSession = Depends(get_session),
     _=Depends(get_current_user),
 ):
-    query = select(Article).order_by(desc(Article.published_at), desc(Article.fetched_at))
-    count_query = select(func.count(Article.id))
+    query = select(Article).where(Article.agent_key == "investment").order_by(desc(Article.published_at), desc(Article.fetched_at))
+    count_query = select(func.count(Article.id)).where(Article.agent_key == "investment")
 
     since = datetime.utcnow() - timedelta(hours=hours)
     query = query.where(Article.fetched_at >= since)
