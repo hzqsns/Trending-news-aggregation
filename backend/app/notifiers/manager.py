@@ -55,6 +55,7 @@ async def push_important_news():
 
         result = await session.execute(
             select(Article)
+            .where(Article.agent_key == "investment")
             .where(Article.is_pushed == False)  # noqa: E712
             .where(Article.importance >= 3)
             .order_by(desc(Article.importance))
