@@ -90,12 +90,13 @@ async def get_stats(
     _=Depends(get_current_user),
 ):
     total_articles = (
-        await session.execute(select(func.count(Article.id)))
+        await session.execute(select(func.count(Article.id)).where(Article.agent_key == "investment"))
     ).scalar() or 0
 
     source_stats = (
         await session.execute(
             select(Article.source, func.count(Article.id))
+            .where(Article.agent_key == "investment")
             .group_by(Article.source)
             .order_by(func.count(Article.id).desc())
         )
@@ -109,6 +110,7 @@ async def get_stats(
         count = (
             await session.execute(
                 select(func.count(Article.id))
+                .where(Article.agent_key == "investment")
                 .where(Article.fetched_at >= start)
                 .where(Article.fetched_at < end)
             )
