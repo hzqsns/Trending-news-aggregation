@@ -225,6 +225,7 @@ async def generate_twitter_digest() -> bool:
     async with async_session() as session:
         existing = (await session.execute(
             select(DailyReport)
+            .where(DailyReport.agent_key == "investment")
             .where(DailyReport.report_type == "twitter_digest")
             .where(DailyReport.report_date == today)
         )).scalar_one_or_none()
@@ -234,6 +235,7 @@ async def generate_twitter_digest() -> bool:
             existing.title = f"{today.isoformat()} 推特博主观点日报"
         else:
             report = DailyReport(
+                agent_key="investment",
                 report_type="twitter_digest",
                 report_date=today,
                 title=f"{today.isoformat()} 推特博主观点日报",
