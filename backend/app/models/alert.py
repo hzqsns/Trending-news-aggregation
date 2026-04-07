@@ -23,9 +23,14 @@ class Alert(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
+    __table_args__ = (
+        Index("ix_alerts_agent_key", "agent_key"),
+    )
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "agent_key": self.agent_key,
             "level": self.level,
             "title": self.title,
             "description": self.description,
