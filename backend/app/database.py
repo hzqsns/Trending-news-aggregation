@@ -1,9 +1,12 @@
 import json
+import logging
 import os
 
-from sqlalchemy import TypeDecorator, Text, event
+from sqlalchemy import TypeDecorator, Text, event, text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
+
+logger = logging.getLogger(__name__)
 
 from app.config import settings
 
