@@ -67,6 +67,7 @@ async def trending_articles(
     since = datetime.utcnow() - timedelta(hours=24)
     query = (
         select(Article)
+        .where(Article.agent_key == "investment")
         .where(Article.fetched_at >= since)
         .order_by(desc(Article.importance), desc(Article.published_at))
         .limit(limit)
