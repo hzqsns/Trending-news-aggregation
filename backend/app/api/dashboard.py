@@ -42,6 +42,7 @@ async def get_overview(
     important_today = (
         await session.execute(
             select(func.count(Article.id))
+            .where(Article.agent_key == "investment")
             .where(Article.fetched_at >= today_start)
             .where(Article.importance >= 3)
         )
@@ -50,6 +51,7 @@ async def get_overview(
     category_counts = (
         await session.execute(
             select(Article.category, func.count(Article.id))
+            .where(Article.agent_key == "investment")
             .where(Article.fetched_at >= today_start)
             .group_by(Article.category)
         )
