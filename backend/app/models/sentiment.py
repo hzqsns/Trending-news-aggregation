@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import String, DateTime, Integer, Text
+from sqlalchemy import String, DateTime, Integer, Text, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base, JSONField
@@ -10,6 +10,7 @@ class SentimentSnapshot(Base):
     __tablename__ = "sentiment_snapshots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    agent_key: Mapped[str] = mapped_column(String(50), default="investment", nullable=False)
     snapshot_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     overall_score: Mapped[int] = mapped_column(Integer, default=50)
     label: Mapped[str] = mapped_column(String(20), default="neutral")
