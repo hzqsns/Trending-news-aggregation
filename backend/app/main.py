@@ -123,10 +123,13 @@ async def lifespan(app: FastAPI):
     await _init_settings()
     await _init_builtin_skills()
     await _init_historical_events()
-    start_scheduler()
-    logger.info("✅ News Agent is ready")
+    kernel = SchedulerKernel(_apscheduler)
+    for agent in agent_registry.list_agents():
+        kernel.register_agent(agent)
+    kernel.start()
+    logger.info(f"✅ News Agent is ready ({len(agent_registry.list_agents())} agents)")
     yield
-    stop_scheduler()
+    kernel.shutdown()
     logger.info("👋 News Agent stopped")
 
 
