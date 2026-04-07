@@ -23,13 +23,13 @@ async def get_overview(
 
     today_articles = (
         await session.execute(
-            select(func.count(Article.id)).where(Article.fetched_at >= today_start)
+            select(func.count(Article.id)).where(Article.agent_key == "investment", Article.fetched_at >= today_start)
         )
     ).scalar() or 0
 
     active_alerts = (
         await session.execute(
-            select(func.count(Alert.id)).where(Alert.is_active == True)  # noqa: E712
+            select(func.count(Alert.id)).where(Alert.agent_key == "investment", Alert.is_active == True)  # noqa: E712
         )
     ).scalar() or 0
 
