@@ -91,6 +91,7 @@ async def push_news_digest():
         since = datetime.utcnow() - timedelta(minutes=30)
         result = await session.execute(
             select(Article)
+            .where(Article.agent_key == "investment")
             .where(Article.is_pushed == False)  # noqa: E712
             .where(Article.fetched_at >= since)
             .order_by(desc(Article.importance))
