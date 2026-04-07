@@ -180,6 +180,7 @@ async def generate_twitter_digest() -> bool:
         since = datetime.utcnow() - timedelta(hours=24)
         result = await session.execute(
             select(Article)
+            .where(Article.agent_key == "investment")
             .where(Article.category == "twitter")
             .where(Article.published_at >= since)
             .order_by(desc(Article.published_at))
