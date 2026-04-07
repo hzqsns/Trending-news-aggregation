@@ -36,19 +36,20 @@ async def _is_source_enabled(session: AsyncSession, key: str) -> bool:
     return setting.value == "true"
 
 
-async def _save_items(session: AsyncSession, items: list[NewsItem]) -> tuple[int, list[dict]]:
+async def _save_items(session: AsyncSession, items: list[NewsItem], agent_key: str = "investment") -> tuple[int, list[dict]]:
     saved = 0
     new_articles: list[dict] = []
     for item in items:
         if not item.title or not item.url:
             continue
         existing = await session.execute(
-            select(Article).where(Article.url == item.url)
+            select(Article).where(Article.agent_key == agent_key, Article.url == item.url)
         )
         if existing.scalar_one_or_none():
             continue
 
         article = Article(
+            agent_key=agent_key,
             title=item.title,
             url=item.url,
             source=item.source,
