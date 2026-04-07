@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import String, Text, DateTime, Boolean, Integer
+from sqlalchemy import String, Text, DateTime, Boolean, Integer, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base, JSONField
@@ -10,6 +10,7 @@ class Alert(Base):
     __tablename__ = "alerts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    agent_key: Mapped[str] = mapped_column(String(50), default="investment", nullable=False)
     level: Mapped[str] = mapped_column(String(20), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
