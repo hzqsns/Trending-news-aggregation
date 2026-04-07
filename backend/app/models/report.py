@@ -10,6 +10,7 @@ class DailyReport(Base):
     __tablename__ = "daily_reports"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    agent_key: Mapped[str] = mapped_column(String(50), default="investment", nullable=False)
     report_type: Mapped[str] = mapped_column(String(20), nullable=False)
     report_date: Mapped[date] = mapped_column(Date, nullable=False)
     title: Mapped[str | None] = mapped_column(String(200), nullable=True)
