@@ -27,6 +27,7 @@ class DailyReport(Base):
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "agent_key": self.agent_key,
             "report_type": self.report_type,
             "report_date": self.report_date.isoformat() if self.report_date else None,
             "title": self.title,
