@@ -21,9 +21,14 @@ class Skill(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    __table_args__ = (
+        UniqueConstraint("agent_key", "slug", name="uq_skills_agent_slug"),
+    )
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
+            "agent_key": self.agent_key,
             "name": self.name,
             "slug": self.slug,
             "description": self.description,
