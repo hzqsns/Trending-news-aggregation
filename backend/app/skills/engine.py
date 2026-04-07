@@ -55,17 +55,19 @@ async def _score_batch(articles: list[Article]) -> dict[int, dict]:
     return out
 
 
-async def run_importance_scoring():
+async def run_importance_scoring(agent_key: str = "investment"):
     """批量评分最近 24h 内未评分的文章，每批 BATCH_SIZE 篇合并为一次 API 调用。"""
     async with async_session() as session:
         since = datetime.utcnow() - timedelta(hours=24)
-        result = await session.execute(
+        q = (
             select(Article)
+            .where(Article.agent_key == agent_key)
             .where(Article.fetched_at >= since)
             .where(Article.ai_analysis == None)  # noqa: E711
             .order_by(desc(Article.fetched_at))
             .limit(50)
         )
+        result = await session.execute(q)
         articles = result.scalars().all()
         if not articles:
             logger.info("No articles to score")
