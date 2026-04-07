@@ -21,7 +21,7 @@ class DailyReport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        UniqueConstraint("report_type", "report_date", name="uq_report_type_date"),
+        UniqueConstraint("agent_key", "report_type", "report_date", name="uq_report_agent_type_date"),
     )
 
     def to_dict(self) -> dict:
