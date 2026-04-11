@@ -1,0 +1,26 @@
+/* Agent 主题色变量 — 根据 <html data-agent="..."> 切换 */
+
+:root[data-agent="investment"] {
+  --agent-accent: 37 99 235;         /* blue-600 */
+  --agent-accent-soft: 59 130 246;   /* blue-500 */
+  --agent-ring: 96 165 250;          /* blue-400 */
+}
+
+:root[data-agent="tech_info"] {
+  --agent-accent: 124 58 237;        /* violet-600 */
+  --agent-accent-soft: 139 92 246;   /* violet-500 */
+  --agent-ring: 167 139 250;         /* violet-400 */
+}
+
+:root[data-agent="cs2_market"] {
+  --agent-accent: 217 119 6;         /* amber-600 */
+  --agent-accent-soft: 245 158 11;   /* amber-500 */
+  --agent-ring: 251 191 36;          /* amber-400 */
+}
+
+/* Default (no data-agent set) */
+:root:not([data-agent]) {
+  --agent-accent: 37 99 235;
+  --agent-accent-soft: 59 130 246;
+  --agent-ring: 96 165 250;
+}

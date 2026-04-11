@@ -1,0 +1,133 @@
+{
+  "scanned_at": "2026-03-23T00:00:00Z",
+  "project": "Trending-news-aggregation",
+  "description": "AI-powered financial news aggregation and investment research system. FastAPI backend + React TypeScript frontend.",
+  "root_claude_md": "CLAUDE.md",
+  "coverage": {
+    "estimated_total_files": 65,
+    "scanned_files": 45,
+    "coverage_percent": 69,
+    "truncated": false,
+    "notes": "Ignored: .pnpm-store/, backend/venv/, backend/data/, node_modules/, dist/, .git/, *.log, *.db"
+  },
+  "modules": [
+    {
+      "path": "backend",
+      "language": "Python 3.11+",
+      "claude_md": "backend/CLAUDE.md",
+      "entry": "backend/app/main.py",
+      "framework": "FastAPI 0.115 + Uvicorn 0.34",
+      "database": "SQLite via SQLAlchemy 2.0 async + aiosqlite",
+      "scheduler": "APScheduler AsyncIOScheduler (8 jobs)",
+      "key_paths": [
+        "backend/app/main.py",
+        "backend/app/config.py",
+        "backend/app/database.py",
+        "backend/app/scheduler.py",
+        "backend/app/auth.py",
+        "backend/app/api/router.py",
+        "backend/app/skills/engine.py",
+        "backend/app/ai/client.py",
+        "backend/app/sources/manager.py",
+        "backend/app/notifiers/manager.py",
+        "backend/app/models/setting.py",
+        "backend/requirements.txt"
+      ],
+      "api_routes": [
+        "/api/auth",
+        "/api/articles",
+        "/api/bookmarks",
+        "/api/dashboard",
+        "/api/reports",
+        "/api/alerts",
+        "/api/skills",
+        "/api/settings",
+        "/api/twitter",
+        "/api/ws/news"
+      ],
+      "orm_models": [
+        "users",
+        "articles",
+        "alerts",
+        "daily_reports",
+        "skills",
+        "sentiment_snapshots",
+        "system_settings",
+        "article_bookmarks"
+      ],
+      "sources": ["RSS (14 feeds)", "CoinGecko", "NewsAPI", "Twitter/twikit"],
+      "notifiers": ["Telegram", "WeChat/PushPlus", "QQ/Qmsg"],
+      "ai_providers": ["openai", "deepseek", "gemini", "openrouter", "dashscope", "minimax"],
+      "ai_formats": ["openai", "anthropic"],
+      "coverage": {
+        "entry": true,
+        "interfaces": true,
+        "data_models": true,
+        "tests": false,
+        "gaps": ["no automated tests", "no migration tooling documented"]
+      }
+    },
+    {
+      "path": "frontend",
+      "language": "TypeScript / React 19",
+      "claude_md": "frontend/CLAUDE.md",
+      "entry": "frontend/src/main.tsx",
+      "framework": "Vite 7 + React 19 + TailwindCSS 4",
+      "state": "Zustand 5",
+      "key_paths": [
+        "frontend/src/App.tsx",
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/api/client.ts",
+        "frontend/src/api/index.ts",
+        "frontend/src/stores/auth.ts",
+        "frontend/src/stores/theme.ts",
+        "frontend/src/hooks/useNewsSocket.ts",
+        "frontend/package.json"
+      ],
+      "pages": [
+        "Dashboard",
+        "NewsFeed",
+        "Bookmarks",
+        "Reports",
+        "Alerts",
+        "Skills",
+        "TwitterTracking",
+        "Settings",
+        "Login"
+      ],
+      "coverage": {
+        "entry": true,
+        "interfaces": true,
+        "data_models": false,
+        "tests": false,
+        "gaps": [
+          "no automated tests",
+          "no dedicated types/ directory",
+          "page components not individually documented"
+        ]
+      }
+    }
+  ],
+  "ignored_paths": [
+    ".pnpm-store/ (gitignore)",
+    "backend/venv/ (gitignore)",
+    "backend/data/ (gitignore)",
+    "node_modules/ (gitignore)",
+    "frontend/dist/ (gitignore)",
+    ".git/",
+    "backend/test_twikit.py (gitignore)"
+  ],
+  "gaps": [
+    "No automated tests in either backend or frontend",
+    "No database migration tooling (manual ALTER TABLE required for schema changes)",
+    "No dedicated frontend types/ directory — TypeScript interfaces are inline in page components",
+    "Individual page components (Dashboard, NewsFeed, etc.) not deeply documented",
+    "No CI/CD configuration"
+  ],
+  "next_scan_priority": [
+    "backend/app/api/dashboard.py — dashboard stats logic",
+    "backend/app/api/settings.py — test-ai endpoint and provider logic",
+    "backend/app/sources/crypto.py — CoinGecko integration details",
+    "frontend/src/pages/ — individual page component logic"
+  ]
+}

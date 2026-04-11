@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { Settings, LogOut, Moon, Sun, Monitor, Menu, X } from 'lucide-react'
 import { useAuthStore } from '@/stores/auth'
@@ -22,6 +22,10 @@ export default function Layout() {
 
   const currentAgent = AGENTS.find((a) => a.id === currentAgentId) ?? AGENTS[0]
   const currentThemeIcon = themeOptions.find((t) => t.value === theme)?.icon || Monitor
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-agent', currentAgentId)
+  }, [currentAgentId])
 
   const cycleTheme = () => {
     const order: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system']

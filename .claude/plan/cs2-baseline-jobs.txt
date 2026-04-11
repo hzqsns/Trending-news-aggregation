@@ -1,0 +1,24 @@
+=== Tables (11) ===
+  alerts
+  article_bookmarks
+  articles
+  calendar_events
+  daily_reports
+  historical_events
+  macro_data_points
+  sentiment_snapshots
+  skills
+  system_settings
+  users
+
+=== Baseline jobs (10) ===
+  investment:fetch_news
+  investment:push_important
+  investment:push_digest
+  investment:anomaly_check
+  investment:morning_report
+  investment:evening_report
+  investment:cleanup
+  investment:fetch_twitter
+  investment:twitter_digest
+  tech_info:fetch_tech

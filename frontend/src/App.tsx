@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth'
 import { useAgentStore } from '@/stores/agent'
+import { ToastProvider } from '@/components/ui'
 import Layout from '@/components/Layout'
 
 // Shared pages
@@ -29,6 +30,14 @@ const V2exFeed = lazy(() => import('@/pages/tech/V2exFeed'))
 const LinuxDoFeed = lazy(() => import('@/pages/tech/LinuxDoFeed'))
 const TechTwitter = lazy(() => import('@/pages/tech/TechTwitter'))
 
+// CS2 Market Agent pages
+const Cs2Dashboard = lazy(() => import('@/pages/cs2/Dashboard'))
+const Cs2Rankings = lazy(() => import('@/pages/cs2/Rankings'))
+const Cs2Categories = lazy(() => import('@/pages/cs2/Categories'))
+const Cs2ItemDetail = lazy(() => import('@/pages/cs2/ItemDetail'))
+const Cs2Predictions = lazy(() => import('@/pages/cs2/Predictions'))
+const Cs2Watchlist = lazy(() => import('@/pages/cs2/Watchlist'))
+
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const token = useAuthStore((s) => s.token)
   if (!token) return <Navigate to="/login" replace />
@@ -37,7 +46,10 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function DefaultRedirect() {
   const agentId = useAgentStore((s) => s.currentAgentId)
-  const prefix = agentId === 'tech_info' ? '/tech' : '/invest'
+  const prefix =
+    agentId === 'tech_info' ? '/tech' :
+    agentId === 'cs2_market' ? '/cs2' :
+    '/invest'
   return <Navigate to={prefix} replace />
 }
 
@@ -48,6 +60,7 @@ const Fallback = () => (
 export default function App() {
   return (
     <BrowserRouter>
+      <ToastProvider>
       <Suspense fallback={<Fallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -82,6 +95,14 @@ export default function App() {
             <Route path="/tech/linux-do" element={<LinuxDoFeed />} />
             <Route path="/tech/twitter" element={<TechTwitter />} />
 
+            {/* CS2 Market Agent routes */}
+            <Route path="/cs2" element={<Cs2Dashboard />} />
+            <Route path="/cs2/rankings" element={<Cs2Rankings />} />
+            <Route path="/cs2/categories" element={<Cs2Categories />} />
+            <Route path="/cs2/item/:id" element={<Cs2ItemDetail />} />
+            <Route path="/cs2/predictions" element={<Cs2Predictions />} />
+            <Route path="/cs2/watchlist" element={<Cs2Watchlist />} />
+
             {/* Shared routes */}
             <Route path="/settings" element={<Settings />} />
 
@@ -99,6 +120,7 @@ export default function App() {
           </Route>
         </Routes>
       </Suspense>
+      </ToastProvider>
     </BrowserRouter>
   )
 }

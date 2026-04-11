@@ -9,6 +9,9 @@ from app.agents.investment import register_investment_agent
 from app.agents.investment.defaults import BUILTIN_SKILLS
 from app.agents.tech_info import register_tech_info_agent
 from app.agents.tech_info.defaults import BUILTIN_SKILLS as TECH_BUILTIN_SKILLS
+from app.agents.cs2_market import register_cs2_market_agent
+from app.agents.cs2_market.defaults import BUILTIN_SKILLS as CS2_BUILTIN_SKILLS
+from app.agents.cs2_market.items_catalog import seed_initial_items
 from app.config import settings
 from app.auth import hash_password
 from app.database import init_db, async_session
@@ -95,6 +98,13 @@ async def _init_builtin_skills():
             if not existing.scalar_one_or_none():
                 skill = Skill(agent_key="tech_info", is_builtin=True, **skill_data)
                 session.add(skill)
+        for skill_data in CS2_BUILTIN_SKILLS:
+            existing = await session.execute(
+                select(Skill).where(Skill.agent_key == "cs2_market", Skill.slug == skill_data["slug"])
+            )
+            if not existing.scalar_one_or_none():
+                skill = Skill(agent_key="cs2_market", is_builtin=True, **skill_data)
+                session.add(skill)
         await session.commit()
 
 
@@ -118,7 +128,9 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting News Agent...")
     register_investment_agent(agent_registry)
     register_tech_info_agent(agent_registry)
+    register_cs2_market_agent(agent_registry)
     await init_db()
+    await seed_initial_items()
     await _init_admin_user()
     await _init_settings()
     await _init_builtin_skills()
@@ -153,6 +165,10 @@ app.include_router(api_router)
 # Tech Info Agent routes
 from app.agents.tech_info.routes import router as tech_router  # noqa: E402
 app.include_router(tech_router)
+
+# CS2 Market Agent routes
+from app.agents.cs2_market.routes import router as cs2_router  # noqa: E402
+app.include_router(cs2_router)
 
 
 @app.get("/health")
