@@ -109,6 +109,47 @@ DEFAULT_RSS_FEEDS = [
         "url": "https://36kr.com/feed",
         "category": "tech",
     },
+    # --- AI 行业快讯（公司/IPO/融资/大模型发布）---
+    {
+        "name": "机器之心",
+        "url": "https://www.jiqizhixin.com/rss",
+        "category": "ai_industry",
+    },
+    {
+        "name": "量子位",
+        "url": "https://www.qbitai.com/feed",
+        "category": "ai_industry",
+    },
+    {
+        "name": "36氪快讯",
+        "url": "https://36kr.com/feed-article-newsflashes",
+        "category": "ai_industry",
+    },
+    {
+        "name": "虎嗅",
+        "url": "https://www.huxiu.com/rss/0.xml",
+        "category": "ai_industry",
+    },
+    {
+        "name": "TechCrunch AI",
+        "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
+        "category": "ai_industry",
+    },
+    {
+        "name": "VentureBeat AI",
+        "url": "https://venturebeat.com/category/ai/feed/",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Hugging Face Blog",
+        "url": "https://huggingface.co/blog/feed.xml",
+        "category": "ai_industry",
+    },
+    {
+        "name": "MIT Technology Review",
+        "url": "https://www.technologyreview.com/feed/",
+        "category": "ai_industry",
+    },
 ]
 
 

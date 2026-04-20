@@ -103,3 +103,68 @@ async def _migrate_agent_key():
                     f"ALTER TABLE {table} ADD COLUMN agent_key VARCHAR(50) DEFAULT NULL"
                 ))
                 logger.info(f"Migration: added agent_key to {table} (nullable)")
+
+    await _fix_unique_constraints()
+
+
+async def _fix_unique_constraints():
+    """Fix old single-column UNIQUE → composite (agent_key, ...) UNIQUE.
+
+    SQLite cannot ALTER CONSTRAINT, so we: create tmp → copy → drop → rename.
+    Idempotent: skips if new composite index already exists.
+    """
+    migrations = {
+        "articles": ("url", "uq_articles_agent_url", "agent_key, url"),
+        "skills": ("slug", "uq_skills_agent_slug", "agent_key, slug"),
+        "daily_reports": ("report_type, report_date", "uq_report_agent_type_date", "agent_key, report_type, report_date"),
+        "system_settings": ("key", "uq_settings_agent_key", "agent_key, key"),
+    }
+
+    async with engine.begin() as conn:
+        for table, (old_cols_str, new_idx_name, new_cols_str) in migrations.items():
+            # Check if already migrated
+            indexes = (await conn.execute(text(f"PRAGMA index_list({table})"))).fetchall()
+            idx_names = [idx[1] for idx in indexes]
+            if new_idx_name in idx_names:
+                continue
+
+            # Check old UNIQUE still present
+            old_cols = [c.strip() for c in old_cols_str.split(",")]
+            has_old = False
+            for idx in indexes:
+                if idx[2]:  # unique
+                    cols = (await conn.execute(text(f'PRAGMA index_info("{idx[1]}")'))).fetchall()
+                    if [c[2] for c in cols] == old_cols:
+                        has_old = True
+                        break
+
+            if not has_old:
+                continue
+
+            logger.info(f"Migration: rebuilding {table} — UNIQUE({old_cols_str}) → UNIQUE({new_cols_str})")
+
+            # Get all column info
+            col_info = (await conn.execute(text(f"PRAGMA table_info({table})"))).fetchall()
+            col_names = [r[1] for r in col_info]
+            cols_csv = ", ".join(col_names)
+
+            # Build new CREATE TABLE from ORM metadata
+            sa_table = Base.metadata.tables.get(table)
+            if sa_table is None:
+                continue
+
+            from sqlalchemy.schema import CreateTable
+            create_ddl = str(CreateTable(sa_table).compile(conn.sync_engine))
+
+            tmp = f"_migrate_{table}"
+            await conn.execute(text(f"DROP TABLE IF EXISTS {tmp}"))
+
+            # Replace table name in DDL
+            tmp_ddl = create_ddl.replace(f"CREATE TABLE {table}", f"CREATE TABLE {tmp}", 1)
+            await conn.execute(text(tmp_ddl))
+
+            await conn.execute(text(f"INSERT INTO {tmp} ({cols_csv}) SELECT {cols_csv} FROM {table}"))
+            await conn.execute(text(f"DROP TABLE {table}"))
+            await conn.execute(text(f"ALTER TABLE {tmp} RENAME TO {table}"))
+
+            logger.info(f"Migration: {table} rebuilt OK")

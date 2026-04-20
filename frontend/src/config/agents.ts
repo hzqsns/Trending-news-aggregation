@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Newspaper, Bookmark, FileText, AlertTriangle, Cpu,
-  AtSign, CalendarDays, TrendingUp, History, Bot,
+  AtSign, CalendarDays, TrendingUp, History, Bot, Zap,
   Github, MessageSquare, Globe, Rss,
   Package, BarChart3, LayoutGrid, Sparkles, Star,
   type LucideIcon,
@@ -34,6 +34,7 @@ export const AGENTS: AgentManifest[] = [
     accentClass: 'bg-blue-600 hover:bg-blue-500',
     navItems: [
       { to: '/invest', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/invest/ai-news', icon: Zap, label: 'AI 快讯' },
       { to: '/invest/news', icon: Newspaper, label: '新闻流' },
       { to: '/invest/bookmarks', icon: Bookmark, label: '收藏夹' },
       { to: '/invest/reports', icon: FileText, label: 'AI 日报' },

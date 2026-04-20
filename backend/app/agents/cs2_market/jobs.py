@@ -1,14 +1,17 @@
 import logging
 from datetime import datetime, timedelta
 
-from sqlalchemy import select, delete, desc
+from sqlalchemy import select, delete, desc, func
 
+from app.ai.client import chat_completion
 from app.crawlers.steam_market import SteamMarketCrawler
 from app.crawlers.cs2_patchnotes import CS2PatchNotesCrawler
 from app.database import async_session
 from app.models.cs2_item import CS2Item
 from app.models.cs2_price import CS2PriceSnapshot
+from app.models.cs2_prediction import CS2Prediction
 from app.models.cs2_watchlist import CS2Watchlist
+from app.models.report import DailyReport
 from app.platform.scheduler import SchedulerKernel
 
 logger = logging.getLogger(__name__)
@@ -75,25 +78,28 @@ async def job_fetch_patchnotes():
 
 
 async def job_generate_predictions():
-    """每日为 Top 热门 + 自选饰品生成 LLM 预测"""
-    logger.info("⏰ CS2: generating predictions")
+    """每日为 Top 热门饰品批量生成 LLM 预测（批量调用，省 90%+ token）"""
+    logger.info("⏰ CS2: generating predictions (batch mode)")
     try:
-        from app.agents.cs2_market.predictor import predict_item
+        from app.agents.cs2_market.predictor import predict_batch, PREDICTION_BATCH_SIZE
         async with async_session() as session:
-            # Top 50 最活跃的饰品（按最近 24h 快照数）
             items = (await session.execute(
                 select(CS2Item).where(CS2Item.is_tracked == True).limit(50)  # noqa: E712
             )).scalars().all()
 
-        count = 0
-        for item in items:
-            for period in ["7d", "14d", "30d"]:
+        item_ids = [item.id for item in items]
+        total_preds = 0
+        for period in ["7d", "14d", "30d"]:
+            # 分批，每批 PREDICTION_BATCH_SIZE 个
+            for i in range(0, len(item_ids), PREDICTION_BATCH_SIZE):
+                batch_ids = item_ids[i:i + PREDICTION_BATCH_SIZE]
                 try:
-                    await predict_item(item.id, period)
-                    count += 1
+                    preds = await predict_batch(batch_ids, period)
+                    total_preds += len(preds)
                 except Exception as e:
-                    logger.warning(f"Predict {item.id} {period} failed: {e}")
-        logger.info(f"CS2: generated {count} predictions")
+                    logger.warning(f"Batch predict {period} batch {i} failed: {e}")
+
+        logger.info(f"CS2: generated {total_preds} predictions (batch mode)")
     except Exception as e:
         logger.error(f"CS2 generate_predictions error: {e}")
 
@@ -157,11 +163,134 @@ async def job_cleanup_snapshots():
         logger.error(f"CS2 cleanup error: {e}")
 
 
+async def job_cs2_daily_report():
+    """每日生成 CS2 饰品市场日报，写入 daily_reports 表"""
+    logger.info("⏰ CS2: generating daily market report")
+    try:
+        today = datetime.utcnow().date()
+        async with async_session() as session:
+            existing = (await session.execute(
+                select(DailyReport).where(
+                    DailyReport.agent_key == AGENT_KEY,
+                    DailyReport.report_type == "morning",
+                    DailyReport.report_date == today,
+                )
+            )).scalar_one_or_none()
+            if existing:
+                logger.info("CS2 daily report already exists, skipping")
+                return
+
+            # 收集市场数据
+            since = datetime.utcnow() - timedelta(hours=24)
+
+            # 涨幅/跌幅 Top 5
+            items = (await session.execute(
+                select(CS2Item).where(CS2Item.is_tracked == True).limit(100)  # noqa: E712
+            )).scalars().all()
+
+            ranked = []
+            for item in items:
+                latest = (await session.execute(
+                    select(CS2PriceSnapshot)
+                    .where(CS2PriceSnapshot.item_id == item.id)
+                    .order_by(desc(CS2PriceSnapshot.snapshot_time))
+                    .limit(1)
+                )).scalar_one_or_none()
+                earliest = (await session.execute(
+                    select(CS2PriceSnapshot)
+                    .where(CS2PriceSnapshot.item_id == item.id, CS2PriceSnapshot.snapshot_time >= since)
+                    .order_by(CS2PriceSnapshot.snapshot_time.asc())
+                    .limit(1)
+                )).scalar_one_or_none()
+                if latest and earliest and earliest.price > 0:
+                    pct = (latest.price - earliest.price) / earliest.price * 100
+                    ranked.append((item.display_name, latest.price, pct, latest.volume))
+
+            if not ranked:
+                logger.info("CS2: no price data for daily report")
+                return
+
+            ranked.sort(key=lambda x: x[2], reverse=True)
+            gainers = ranked[:5]
+            losers = ranked[-5:][::-1]
+
+            # 收集最近预测
+            predictions = (await session.execute(
+                select(CS2Prediction)
+                .where(CS2Prediction.period == "7d", CS2Prediction.generated_at >= since)
+                .order_by(desc(CS2Prediction.confidence))
+                .limit(5)
+            )).scalars().all()
+
+            pred_items_map = {}
+            if predictions:
+                pred_item_ids = [p.item_id for p in predictions]
+                pred_items = (await session.execute(
+                    select(CS2Item).where(CS2Item.id.in_(pred_item_ids))
+                )).scalars().all()
+                pred_items_map = {i.id: i for i in pred_items}
+
+        # 构建 LLM prompt
+        market_text = f"24h 数据：{len(ranked)} 个饰品追踪中\n\n"
+        market_text += "涨幅 Top 5：\n"
+        for name, price, pct, vol in gainers:
+            market_text += f"- {name}: ¥{price:.0f} ({pct:+.1f}%) 成交量={vol}\n"
+        market_text += "\n跌幅 Top 5：\n"
+        for name, price, pct, vol in losers:
+            market_text += f"- {name}: ¥{price:.0f} ({pct:+.1f}%) 成交量={vol}\n"
+
+        if predictions:
+            market_text += "\nAI 高置信预测：\n"
+            for p in predictions:
+                item_name = pred_items_map.get(p.item_id)
+                name = item_name.display_name if item_name else f"Item#{p.item_id}"
+                market_text += f"- {name}: {p.direction} ({p.confidence:.0%}) → ¥{p.predicted_price or '?'}\n"
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "你是 CS2 饰品市场分析师。根据以下 24h 市场数据生成简洁的每日行情日报。\n"
+                    "用 Markdown 格式，包含：\n"
+                    "## 市场概览（1-2段总结）\n"
+                    "## 涨幅榜（Top 5 + 简评）\n"
+                    "## 跌幅榜（Top 5 + 简评）\n"
+                    "## AI 预测信号（如有）\n"
+                    "## 操作建议（简短 2-3 条）\n"
+                    "中文撰写，专业但简洁，500-800 字。"
+                ),
+            },
+            {"role": "user", "content": market_text},
+        ]
+
+        content = await chat_completion(messages, max_tokens=1500, temperature=0.4)
+        if not content:
+            logger.warning("CS2 daily report: LLM returned empty")
+            return
+
+        async with async_session() as session:
+            report = DailyReport(
+                agent_key=AGENT_KEY,
+                report_type="morning",
+                report_date=today,
+                title=f"{today.isoformat()} CS2 饰品市场日报",
+                content=content,
+                key_events=[{"gainers": [g[0] for g in gainers], "losers": [l[0] for l in losers]}],
+            )
+            session.add(report)
+            await session.commit()
+            logger.info(f"CS2: daily report generated ({len(content)} chars)")
+
+    except Exception as e:
+        logger.error(f"CS2 daily report error: {e}")
+
+
 def register_cs2_jobs(kernel: SchedulerKernel) -> None:
     kernel.add_agent_job(AGENT_KEY, "fetch_prices", job_fetch_prices, "interval", minutes=5)
     kernel.add_agent_job(AGENT_KEY, "fetch_csgoskins", job_fetch_csgoskins, "interval", minutes=30)
     kernel.add_agent_job(AGENT_KEY, "fetch_patchnotes", job_fetch_patchnotes, "cron", hour=8, minute=0)
     kernel.add_agent_job(AGENT_KEY, "generate_predictions", job_generate_predictions, "cron", hour=9, minute=0)
+    kernel.add_agent_job(AGENT_KEY, "daily_report", job_cs2_daily_report, "cron", hour=9, minute=30)
     kernel.add_agent_job(AGENT_KEY, "check_alerts", job_check_alerts, "interval", minutes=5)
     kernel.add_agent_job(AGENT_KEY, "cleanup_snapshots", job_cleanup_snapshots, "cron", hour=3, minute=0)
 
@@ -172,6 +301,7 @@ __all__ = [
     "job_fetch_csgoskins",
     "job_fetch_patchnotes",
     "job_generate_predictions",
+    "job_cs2_daily_report",
     "job_check_alerts",
     "job_cleanup_snapshots",
 ]

@@ -12,6 +12,7 @@ export const articlesApi = {
   get: (id: number) => client.get(`/articles/${id}`),
   sources: () => client.get('/articles/sources'),
   categories: () => client.get('/articles/categories'),
+  aiNews: (params: Record<string, unknown> = {}) => client.get('/articles/ai-news', { params }),
 }
 
 export const reportsApi = {

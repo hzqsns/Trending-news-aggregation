@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from typing import Optional
@@ -10,6 +11,10 @@ from app.database import async_session
 from app.models.setting import SystemSetting
 
 logger = logging.getLogger(__name__)
+
+MAX_RETRIES = 3
+RETRY_BACKOFF = [2, 5, 15]  # seconds
+RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
 # 预设服务商配置
 PROVIDER_PRESETS = {
@@ -93,10 +98,17 @@ async def _call_openai_format(config: dict, messages: list[dict], temperature: f
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(url, json=payload, headers=headers)
-    if resp.status_code != 200:
-        logger.error(f"AI API error {resp.status_code}: {resp.text[:200]}")
-        return None
+        for attempt in range(MAX_RETRIES):
+            resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code == 200:
+                break
+            if resp.status_code in RETRYABLE_STATUS and attempt < MAX_RETRIES - 1:
+                wait = RETRY_BACKOFF[min(attempt, len(RETRY_BACKOFF) - 1)]
+                logger.warning(f"AI API {resp.status_code}, retry {attempt + 1}/{MAX_RETRIES} in {wait}s")
+                await asyncio.sleep(wait)
+                continue
+            logger.error(f"AI API error {resp.status_code}: {resp.text[:200]}")
+            return None
     data = resp.json()
     content = data.get("choices", [{}])[0].get("message", {}).get("content")
     if not content:
@@ -130,10 +142,17 @@ async def _call_anthropic_format(config: dict, messages: list[dict], temperature
         "Content-Type": "application/json",
     }
     async with httpx.AsyncClient(timeout=120) as client:
-        resp = await client.post(url, json=payload, headers=headers)
-    if resp.status_code != 200:
-        logger.error(f"AI API error {resp.status_code}: {resp.text[:200]}")
-        return None
+        for attempt in range(MAX_RETRIES):
+            resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code == 200:
+                break
+            if resp.status_code in RETRYABLE_STATUS and attempt < MAX_RETRIES - 1:
+                wait = RETRY_BACKOFF[min(attempt, len(RETRY_BACKOFF) - 1)]
+                logger.warning(f"AI API {resp.status_code}, retry {attempt + 1}/{MAX_RETRIES} in {wait}s")
+                await asyncio.sleep(wait)
+                continue
+            logger.error(f"AI API error {resp.status_code}: {resp.text[:200]}")
+            return None
     data = resp.json()
     # Anthropic 格式：content 是列表，取第一个 text block
     content_blocks = data.get("content", [])

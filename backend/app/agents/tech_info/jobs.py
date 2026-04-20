@@ -1,15 +1,17 @@
 import logging
+from datetime import datetime, timedelta
 
+from sqlalchemy import select, desc
+
+from app.ai.client import chat_completion
 from app.crawlers.manager import CrawlerManager
 from app.database import async_session
 from app.models.article import Article
+from app.models.report import DailyReport
 from app.platform.scheduler import SchedulerKernel
 from app.skills.engine import run_importance_scoring
 from app.sources.base import NewsItem
 from app.agents.tech_info.defaults import CRAWLER_KEYS
-
-from datetime import datetime
-from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
 

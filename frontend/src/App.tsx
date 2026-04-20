@@ -11,6 +11,7 @@ const Settings = lazy(() => import('@/pages/Settings'))
 
 // Investment Agent pages
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const AiNews = lazy(() => import('@/pages/AiNews'))
 const NewsFeed = lazy(() => import('@/pages/NewsFeed'))
 const Reports = lazy(() => import('@/pages/Reports'))
 const Alerts = lazy(() => import('@/pages/Alerts'))
@@ -76,6 +77,7 @@ export default function App() {
 
             {/* Investment Agent routes */}
             <Route path="/invest" element={<Dashboard />} />
+            <Route path="/invest/ai-news" element={<AiNews />} />
             <Route path="/invest/news" element={<NewsFeed />} />
             <Route path="/invest/reports" element={<Reports />} />
             <Route path="/invest/alerts" element={<Alerts />} />

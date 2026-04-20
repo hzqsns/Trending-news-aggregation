@@ -89,13 +89,26 @@ async def market_overview(
 async def market_refresh(
     _user: User = Depends(get_current_user),
 ):
-    """手动触发价格采集（复用 job_fetch_prices 逻辑）"""
+    """手动触发价格采集"""
     from app.agents.cs2_market.jobs import job_fetch_prices
     try:
         await job_fetch_prices()
         return {"ok": True, "message": "价格采集已完成"}
     except Exception as e:
         raise HTTPException(500, f"采集失败: {e}")
+
+
+@router.post("/market/daily-report")
+async def generate_daily_report(
+    _user: User = Depends(get_current_user),
+):
+    """手动触发 CS2 日报生成"""
+    from app.agents.cs2_market.jobs import job_cs2_daily_report
+    try:
+        await job_cs2_daily_report()
+        return {"ok": True, "message": "日报生成完成"}
+    except Exception as e:
+        raise HTTPException(500, f"日报生成失败: {e}")
 
 
 @router.post("/predictions/generate-all")

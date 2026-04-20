@@ -76,6 +76,48 @@ async def trending_articles(
     return [a.to_dict() for a in result.scalars().all()]
 
 
+@router.get("/ai-news")
+async def ai_industry_news(
+    hours: int = Query(24, ge=1, le=720),
+    importance_min: int = Query(2, ge=0, le=5),
+    limit: int = Query(20, ge=1, le=100),
+    search: Optional[str] = None,
+    session: AsyncSession = Depends(get_session),
+    _=Depends(get_current_user),
+):
+    """AI 行业快讯专项查询（category=ai_industry）。
+
+    - hours: 最近 N 小时（默认 24h，支持到 30 天）
+    - importance_min: 最低重要度（默认 2，覆盖 IPO/融资/产品发布）
+    """
+    since = datetime.utcnow() - timedelta(hours=hours)
+    query = (
+        select(Article)
+        .where(Article.agent_key == "investment")
+        .where(Article.category == "ai_industry")
+        .where(Article.fetched_at >= since)
+        .where(Article.importance >= importance_min)
+    )
+    if search:
+        query = query.where(Article.title.contains(search))
+    query = query.order_by(desc(Article.importance), desc(Article.published_at)).limit(limit)
+
+    result = await session.execute(query)
+    items = [a.to_dict() for a in result.scalars().all()]
+
+    # 按重要度分桶
+    by_importance: dict[int, list] = {}
+    for item in items:
+        by_importance.setdefault(item["importance"], []).append(item)
+
+    return {
+        "total": len(items),
+        "hours": hours,
+        "items": items,
+        "by_importance": {str(k): v for k, v in sorted(by_importance.items(), reverse=True)},
+    }
+
+
 @router.get("/sources")
 async def list_sources(
     session: AsyncSession = Depends(get_session),

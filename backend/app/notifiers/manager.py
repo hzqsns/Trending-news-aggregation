@@ -47,7 +47,13 @@ async def _get_enabled_notifiers(session: AsyncSession) -> list[Notifier]:
 
 
 async def push_important_news():
-    """Push important unpushed articles."""
+    """Push important unpushed articles.
+
+    规则：
+    - category=ai_industry 的文章 importance >= 2 即推（降低阈值，避免漏掉 IPO/融资）
+    - 其他 category 保持 importance >= 3
+    """
+    from sqlalchemy import or_, and_
     async with async_session() as session:
         notifiers = await _get_enabled_notifiers(session)
         if not notifiers:
@@ -57,15 +63,21 @@ async def push_important_news():
             select(Article)
             .where(Article.agent_key == "investment")
             .where(Article.is_pushed == False)  # noqa: E712
-            .where(Article.importance >= 3)
+            .where(
+                or_(
+                    Article.importance >= 3,
+                    and_(Article.category == "ai_industry", Article.importance >= 2),
+                )
+            )
             .order_by(desc(Article.importance))
             .limit(10)
         )
         articles = result.scalars().all()
 
         for article in articles:
-            level_emoji = {5: "🚨", 4: "⚠️", 3: "📢"}.get(article.importance, "📰")
-            title = f"{level_emoji} {article.title}"
+            level_emoji = {5: "🚨", 4: "⚠️", 3: "📢", 2: "🤖"}.get(article.importance, "📰")
+            prefix = "🤖 [AI快讯] " if article.category == "ai_industry" else ""
+            title = f"{level_emoji} {prefix}{article.title}"
             content = article.summary or article.title
 
             for notifier in notifiers:
