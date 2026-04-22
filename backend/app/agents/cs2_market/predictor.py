@@ -128,7 +128,7 @@ async def predict_batch(
     items_with_indicators: list[tuple[CS2Item, dict]] = []
 
     async with async_session() as session:
-        since = datetime.utcnow() - timedelta(days=30)
+        since = datetime.now() - timedelta(days=30)
         for item_id in item_ids:
             item = (await session.execute(
                 select(CS2Item).where(CS2Item.id == item_id)
@@ -220,7 +220,7 @@ async def predict_item(item_id: int, period: str = "7d") -> Optional[CS2Predicti
             logger.warning(f"Item {item_id} not found")
             return None
 
-        since = datetime.utcnow() - timedelta(days=30)
+        since = datetime.now() - timedelta(days=30)
         snapshots = (await session.execute(
             select(CS2PriceSnapshot)
             .where(CS2PriceSnapshot.item_id == item_id)

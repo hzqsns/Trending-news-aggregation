@@ -81,4 +81,6 @@ DEFAULT_SETTINGS = [
     # --- OpenAlice 集成 ---
     {"key": "openalice_enabled", "value": "false", "category": "openalice", "label": "启用 OpenAlice", "description": "连接 OpenAlice AI 交易引擎（需要单独安装和启动）", "field_type": "boolean"},
     {"key": "openalice_base_url", "value": "http://localhost:3002", "category": "openalice", "label": "OpenAlice 地址", "description": "OpenAlice 服务的 HTTP 地址", "field_type": "text"},
+    # --- CS2 数据源 ---
+    {"key": "csqaq_api_token", "value": "", "category": "cs2", "label": "CSQAQ API Token", "description": "从 csqaq.com 个人中心获取。开启后自动用 BUFF + 悠悠有品 真实市场价替代 Steam 数据", "field_type": "password"},
 ]

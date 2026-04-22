@@ -58,7 +58,7 @@ async def _save_items(session: AsyncSession, items: list[NewsItem], agent_key: s
             content=item.content,
             image_url=item.image_url,
             published_at=item.published_at,
-            fetched_at=datetime.utcnow(),
+            fetched_at=datetime.now(),
             importance=item.importance,
         )
         session.add(article)

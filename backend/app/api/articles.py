@@ -27,7 +27,7 @@ async def list_articles(
     query = select(Article).where(Article.agent_key == "investment").order_by(desc(Article.published_at), desc(Article.fetched_at))
     count_query = select(func.count(Article.id)).where(Article.agent_key == "investment")
 
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now() - timedelta(hours=hours)
     query = query.where(Article.fetched_at >= since)
     count_query = count_query.where(Article.fetched_at >= since)
 
@@ -64,7 +64,7 @@ async def trending_articles(
     session: AsyncSession = Depends(get_session),
     _=Depends(get_current_user),
 ):
-    since = datetime.utcnow() - timedelta(hours=24)
+    since = datetime.now() - timedelta(hours=24)
     query = (
         select(Article)
         .where(Article.agent_key == "investment")
@@ -90,7 +90,7 @@ async def ai_industry_news(
     - hours: 最近 N 小时（默认 24h，支持到 30 天）
     - importance_min: 最低重要度（默认 2，覆盖 IPO/融资/产品发布）
     """
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now() - timedelta(hours=hours)
     query = (
         select(Article)
         .where(Article.agent_key == "investment")

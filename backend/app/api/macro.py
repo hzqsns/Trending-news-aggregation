@@ -77,7 +77,7 @@ async def _fetch_and_store_series(series_id: str, session: AsyncSession) -> int:
             value=round(v, 4),
             yoy=yoy,
             mom=mom,
-            fetched_at=datetime.utcnow(),
+            fetched_at=datetime.now(),
         ))
         count += 1
 
@@ -174,7 +174,7 @@ async def get_analysis(force: bool = False, session: AsyncSession = Depends(get_
     global _analysis_cache
     cached_result, expires_at = _analysis_cache
 
-    if not force and cached_result and expires_at and datetime.utcnow() < expires_at:
+    if not force and cached_result and expires_at and datetime.now() < expires_at:
         return {**cached_result, "cached": True}
 
     # Gather latest values from DB
@@ -215,8 +215,8 @@ async def get_analysis(force: bool = False, session: AsyncSession = Depends(get_
             logger.warning(f"Macro analysis missing 'impacts' key: {result}")
             return {"error": f"AI 返回格式异常（缺少 impacts 字段），原始响应已记录到日志", "cached": False}
 
-        result["generated_at"] = datetime.utcnow().isoformat()
-        _analysis_cache = (result, datetime.utcnow() + timedelta(hours=6))
+        result["generated_at"] = datetime.now().isoformat()
+        _analysis_cache = (result, datetime.now() + timedelta(hours=6))
         return {**result, "cached": False}
     except Exception as e:
         logger.error(f"Macro analysis failed: {e}", exc_info=True)

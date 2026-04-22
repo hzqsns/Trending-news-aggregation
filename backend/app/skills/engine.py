@@ -39,15 +39,39 @@ AI 行业特殊规则（category=ai_industry 时应用以下加权）：
 BATCH_SIZE = 10  # 每批文章数，可按需调整
 
 
-async def _score_batch(articles: list[Article]) -> dict[int, dict]:
-    """批量评分，一次 API 调用处理多篇文章，返回 {article.id: analysis_dict}。"""
+_TECH_SCORING_SYSTEM_PROMPT = """你是 AI/前沿技术资讯分析专家。请对以下技术资讯按重要度评分（关注 AI 行业 + 开源社区 + 大厂技术发布）。
+
+评分标准：
+- 5分：头部 AI 公司重大模型发布（GPT-x、Claude-x、Gemini-x、Qwen-x、DeepSeek-x、Llama-x）；划时代的开源项目（>5k stars/天）；颠覆性研究突破（论文/演示）
+- 4分：知名 AI 公司新产品发布（如 Cursor/Codex/Copilot 重大更新）、千万美元级融资、Top 开源项目重要版本（>1k stars/天）、关键 API/SDK 变更
+- 3分：AI 工具/Agent 框架更新、新兴 AI 应用、热门开源项目（500+ stars/天）、知名公司技术战略调整、有讨论价值的技术博客
+- 2分：常规开源项目、一般技术博文、社区讨论
+- 1分：教程、招聘、与 AI/技术无强相关的内容
+- 0分：完全无关或低质量
+
+加分项（任一满足提升 1 分）：
+- 提及 OpenAI / Anthropic / Google DeepMind / xAI / Meta AI 等头部公司
+- 提及 Claude Code / Cursor / Codex / Copilot / Aider 等 AI 编程工具
+- 提及 RAG / Agent / MCP / Function Calling 等 AI 工程实践
+- GitHub 项目当日 stars 增长 >500
+
+返回 JSON 格式如下（results 数组长度必须等于输入文章数）：
+{"results": [{"index": 1, "importance": 0-5, "sentiment": "bullish/bearish/neutral", "tags": ["AI" / "开源" / "大模型" 等], "reason": "≤20字理由"}, ...]}
+注意：reason 限 20 字以内，tags 最多 3 个。"""
+
+
+async def _score_batch(articles: list[Article], agent_key: str = "investment") -> dict[int, dict]:
+    """批量评分，一次 API 调用处理多篇文章，返回 {article.id: analysis_dict}。
+    根据 agent_key 选择对应的评分 prompt。
+    """
     articles_text = "\n\n".join(
         f"[{i + 1}] 标题: {a.title}\n来源: {a.source}\n分类: {a.category}\n摘要: {a.summary or '无'}"
         for i, a in enumerate(articles)
     )
+    system_prompt = _TECH_SCORING_SYSTEM_PROMPT if agent_key == "tech_info" else _SCORING_SYSTEM_PROMPT
     messages = [
-        {"role": "system", "content": _SCORING_SYSTEM_PROMPT},
-        {"role": "user", "content": f"请评分以下 {len(articles)} 条新闻：\n\n{articles_text}"},
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"请评分以下 {len(articles)} 条资讯：\n\n{articles_text}"},
     ]
     result = await chat_completion_json(messages, max_tokens=200 * len(articles))
     if not result or not isinstance(result.get("results"), list):
@@ -65,7 +89,7 @@ async def _score_batch(articles: list[Article]) -> dict[int, dict]:
 async def run_importance_scoring(agent_key: str = "investment"):
     """批量评分最近 24h 内未评分的文章，每批 BATCH_SIZE 篇合并为一次 API 调用。"""
     async with async_session() as session:
-        since = datetime.utcnow() - timedelta(hours=24)
+        since = datetime.now() - timedelta(hours=24)
         q = (
             select(Article)
             .where(Article.agent_key == agent_key)
@@ -85,7 +109,7 @@ async def run_importance_scoring(agent_key: str = "investment"):
         for i in range(0, len(articles), BATCH_SIZE):
             batch = articles[i: i + BATCH_SIZE]
             try:
-                analyses = await _score_batch(batch)
+                analyses = await _score_batch(batch, agent_key=agent_key)
             except Exception as e:
                 logger.error(f"Batch scoring failed (batch {i // BATCH_SIZE + 1}): {e}")
                 analyses = {}
@@ -108,7 +132,7 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
     """Generate a daily market report using AI."""
     async with async_session() as session:
         # 去重检查必须在 LLM 调用之前，避免浪费 token
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         existing = await session.execute(
             select(DailyReport)
             .where(DailyReport.agent_key == agent_key)
@@ -120,7 +144,7 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
             logger.info(f"{report_type} report already exists for {today}, skipping LLM call")
             return existing_report
 
-        since = datetime.utcnow() - timedelta(hours=24 if report_type == "morning" else 12)
+        since = datetime.now() - timedelta(hours=24 if report_type == "morning" else 12)
         result = await session.execute(
             select(Article)
             .where(Article.agent_key == agent_key)
@@ -139,11 +163,38 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
             for a in articles
         )
 
-        report_label = "早间市场日报" if report_type == "morning" else "晚间市场日报"
-        messages = [
-            {
-                "role": "system",
-                "content": f"""你是一个专业的投研分析 Agent。请基于以下新闻生成{report_label}。
+        # 按 agent 选择日报标签和 prompt
+        if agent_key == "tech_info":
+            report_label = "AI/前沿技术日报"
+            system_prompt = f"""你是一位 AI/前沿技术分析师。请基于以下技术资讯生成{report_label}。
+
+# 输出要求
+用 Markdown 格式，包含以下部分（顺序固定）：
+
+## 🔥 今日要闻
+聚焦 AI 大厂动态（Anthropic/OpenAI/Google DeepMind/Meta AI/智谱/月之暗面等）、
+重大模型发布、AI 编程工具更新（Claude Code/Cursor/Codex/Copilot/Aider 等）。
+列 3-5 条，每条 1-2 句话简评。
+
+## 🚀 开源亮点
+GitHub trending 中值得关注的项目（特别是 AI/Agent/LLM 工具链相关）。
+列 3-5 个项目：[语言] 项目名 — 一句话说明做什么 + 为什么值得看。
+
+## 💡 技术热议
+HackerNews / 推特上有讨论价值的技术文章、实践经验、争议话题。
+列 2-4 条。
+
+## 📌 值得关注
+对开发者/AI 工程师有价值的新工具、API 变更、框架更新等。
+1-3 条即可。
+
+# 风格要求
+- 中文撰写，专业但不堆术语
+- 每条都要有"为什么这件事重要"的判断，不要只罗列标题
+- 整体 600-1000 字"""
+        else:
+            report_label = "早间市场日报" if report_type == "morning" else "晚间市场日报"
+            system_prompt = f"""你是一个专业的投研分析 Agent。请基于以下新闻生成{report_label}。
 
 要求：
 1. 用 Markdown 格式输出
@@ -153,9 +204,11 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
    - ## 市场情绪（整体多空判断）
    - ## 关注要点（今日/明日需要重点关注的事项）
 3. 语言专业但易懂，适合投资者快速阅读
-4. 用中文撰写""",
-            },
-            {"role": "user", "content": f"最近的重要新闻：\n{news_text}"},
+4. 用中文撰写"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": f"最近的重要资讯：\n{news_text}"},
         ]
 
         content = await chat_completion(messages, max_tokens=3000, temperature=0.4)
@@ -173,6 +226,7 @@ async def generate_daily_report(report_type: str = "morning", agent_key: str = "
         session.add(report)
         await session.commit()
         logger.info(f"Generated {report_type} report for {today}")
+        return report
 
 
 def _extract_handle(title: str) -> str:
@@ -185,7 +239,7 @@ def _extract_handle(title: str) -> str:
 async def generate_twitter_digest() -> bool:
     """生成 Twitter 博主观点日报，存入 daily_reports 表（report_type='twitter_digest'）。"""
     async with async_session() as session:
-        since = datetime.utcnow() - timedelta(hours=24)
+        since = datetime.now() - timedelta(hours=24)
         result = await session.execute(
             select(Article)
             .where(Article.agent_key == "investment")
@@ -230,7 +284,7 @@ async def generate_twitter_digest() -> bool:
         logger.warning("Twitter digest: AI returned empty content")
         return False
 
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     async with async_session() as session:
         existing = (await session.execute(
             select(DailyReport)
@@ -261,7 +315,7 @@ async def generate_twitter_digest() -> bool:
 async def run_anomaly_detection(agent_key: str = "investment"):
     """Check for anomalies based on recent high-importance news."""
     async with async_session() as session:
-        since = datetime.utcnow() - timedelta(hours=1)
+        since = datetime.now() - timedelta(hours=1)
         result = await session.execute(
             select(Article)
             .where(Article.agent_key == agent_key)

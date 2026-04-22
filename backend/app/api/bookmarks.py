@@ -204,7 +204,7 @@ async def update_bookmark(
         bookmark.note = body.note
     if body.tags is not None:
         bookmark.tags = _validate_tags(body.tags)
-    bookmark.updated_at = datetime.utcnow()
+    bookmark.updated_at = datetime.now()
 
     await session.commit()
     await session.refresh(bookmark)

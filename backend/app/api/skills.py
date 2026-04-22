@@ -96,7 +96,7 @@ async def update_skill(
             skill.config = body.config
         if body.is_enabled is not None:
             skill.is_enabled = body.is_enabled
-    skill.updated_at = datetime.utcnow()
+    skill.updated_at = datetime.now()
     await session.commit()
     return skill.to_dict()
 

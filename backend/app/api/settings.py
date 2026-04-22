@@ -134,7 +134,7 @@ async def update_setting(
 
     if body.value is not None and body.value != "••••••••":
         setting.value = body.value
-        setting.updated_at = datetime.utcnow()
+        setting.updated_at = datetime.now()
         await session.commit()
     return setting.to_dict()
 
@@ -153,7 +153,7 @@ async def batch_update_settings(
         setting = result.scalar_one_or_none()
         if setting and value != "••••••••":
             setting.value = value
-            setting.updated_at = datetime.utcnow()
+            setting.updated_at = datetime.now()
             updated.append(key)
     await session.commit()
     return {"updated": updated}

@@ -224,7 +224,7 @@ async def seed_events(session: AsyncSession = Depends(get_session)):
         event = HistoricalEvent(
             **data,
             is_builtin=True,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(),
         )
         session.add(event)
         added += 1

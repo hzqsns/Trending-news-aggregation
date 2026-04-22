@@ -56,6 +56,6 @@ async def resolve_alert(
     if not alert:
         return {"error": "Alert not found"}
     alert.is_active = False
-    alert.resolved_at = datetime.utcnow()
+    alert.resolved_at = datetime.now()
     await session.commit()
     return alert.to_dict()

@@ -39,7 +39,7 @@ async def _save_tech_items(items: list[NewsItem]) -> int:
                 content=item.content,
                 image_url=item.image_url,
                 published_at=item.published_at,
-                fetched_at=datetime.utcnow(),
+                fetched_at=datetime.now(),
                 importance=item.importance,
             )
             session.add(article)
@@ -62,8 +62,25 @@ async def job_fetch_tech():
         logger.error(f"Tech fetch job error: {e}")
 
 
+async def job_tech_daily_report():
+    """每日生成技术日报。复用 engine.generate_daily_report，agent_key=tech_info。
+    内置去重：同一天只生成一次。"""
+    logger.info("⏰ Tech: generating daily report")
+    try:
+        from app.skills.engine import generate_daily_report
+        report = await generate_daily_report("morning", agent_key=AGENT_KEY)
+        if report:
+            logger.info(f"Tech daily report ready: {report.title}")
+        else:
+            logger.warning("Tech daily report: no articles or LLM failed")
+    except Exception as e:
+        logger.error(f"Tech daily report error: {e}")
+
+
 def register_tech_jobs(kernel: SchedulerKernel) -> None:
     kernel.add_agent_job("tech_info", "fetch_tech", job_fetch_tech, "interval", minutes=30)
+    # 早上 9:00 生成技术日报（投研 7:30、CS2 9:30，错开 LLM 调用）
+    kernel.add_agent_job("tech_info", "daily_report", job_tech_daily_report, "cron", hour=9, minute=0)
 
 
-__all__ = ["register_tech_jobs", "job_fetch_tech"]
+__all__ = ["register_tech_jobs", "job_fetch_tech", "job_tech_daily_report"]

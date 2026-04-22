@@ -27,7 +27,7 @@ async def market_overview(
 ):
     """Dashboard 总览：总市值、成交量、情绪、走势"""
     hours = {"24h": 24, "7d": 24 * 7, "30d": 24 * 30}.get(period, 24)
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now() - timedelta(hours=hours)
 
     total_items = (await session.execute(
         select(func.count(CS2Item.id)).where(CS2Item.is_tracked == True)  # noqa: E712
@@ -146,7 +146,7 @@ async def hot_items(
     _user: User = Depends(get_current_user),
 ):
     """按近 24h 成交量降序取 Top N 饰品"""
-    since = datetime.utcnow() - timedelta(hours=24)
+    since = datetime.now() - timedelta(hours=24)
     sub = (
         select(
             CS2PriceSnapshot.item_id,
@@ -195,7 +195,7 @@ async def rankings(
 ):
     """涨跌榜 — 按周期对比期初/当前价"""
     hours = {"24h": 24, "7d": 24 * 7, "30d": 24 * 30}.get(period, 24)
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now() - timedelta(hours=hours)
 
     # 拉所有 tracked 饰品 + 最新价 + 期初价
     q = select(CS2Item).where(CS2Item.is_tracked == True)  # noqa: E712
@@ -285,7 +285,7 @@ async def category_trend(
     _user: User = Depends(get_current_user),
 ):
     hours = {"24h": 24, "7d": 24 * 7, "30d": 24 * 30}.get(period, 24 * 7)
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now() - timedelta(hours=hours)
     items = (await session.execute(
         select(CS2Item.id).where(CS2Item.category == category_id)
     )).scalars().all()
@@ -369,7 +369,7 @@ async def item_kline(
     _user: User = Depends(get_current_user),
 ):
     hours = {"1d": 24, "7d": 24 * 7, "30d": 24 * 30, "90d": 24 * 90, "1y": 24 * 365}.get(period, 24 * 7)
-    since = datetime.utcnow() - timedelta(hours=hours)
+    since = datetime.now() - timedelta(hours=hours)
 
     snapshots = (await session.execute(
         select(CS2PriceSnapshot)

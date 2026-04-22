@@ -39,7 +39,7 @@ async def list_tech_articles(
         q = q.where(Article.importance >= importance_min)
         count_q = count_q.where(Article.importance >= importance_min)
     if hours:
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now() - timedelta(hours=hours)
         q = q.where(Article.fetched_at >= cutoff)
         count_q = count_q.where(Article.fetched_at >= cutoff)
 
@@ -65,7 +65,7 @@ async def tech_dashboard(
     session: AsyncSession = Depends(get_session),
     _user=Depends(get_current_user),
 ):
-    now = datetime.utcnow()
+    now = datetime.now()
     h24 = now - timedelta(hours=24)
 
     total = (await session.execute(

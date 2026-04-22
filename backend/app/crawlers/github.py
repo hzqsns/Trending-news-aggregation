@@ -19,13 +19,17 @@ class GitHubTrendingCrawler(CrawlerPlugin):
 
     async def fetch(self) -> list[NewsItem]:
         items: list[NewsItem] = []
-        today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        # 改用"近 7 天创建 + 100+ stars"作为基线，避免某天没新仓库就空空
+        from datetime import timedelta
+        since = (datetime.now(timezone.utc) - timedelta(days=7)).strftime("%Y-%m-%d")
+        # 优先抓 AI/ML/LLM 相关 topic 的项目
+        ai_topics = "topic:ai OR topic:llm OR topic:agent OR topic:rag OR topic:openai OR topic:claude"
         try:
             async with httpx.AsyncClient(timeout=30) as client:
                 resp = await client.get(
                     GITHUB_TRENDING_URL,
                     params={
-                        "q": f"created:>{today}",
+                        "q": f"created:>{since} stars:>50 ({ai_topics})",
                         "sort": "stars",
                         "order": "desc",
                         "per_page": 30,

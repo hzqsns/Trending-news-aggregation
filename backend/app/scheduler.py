@@ -78,7 +78,7 @@ async def job_evening_report():
 async def job_cleanup():
     try:
         async with async_session() as session:
-            cutoff = datetime.utcnow() - timedelta(days=30)
+            cutoff = datetime.now() - timedelta(days=30)
             await session.execute(
                 delete(Article).where(Article.fetched_at < cutoff)
             )

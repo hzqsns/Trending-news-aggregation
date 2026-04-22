@@ -1,4 +1,4 @@
-CRAWLER_KEYS = ["github", "hackernews", "v2ex", "linux_do", "twitter"]
+CRAWLER_KEYS = ["github", "hackernews", "ai_blogs"]
 
 BUILTIN_SKILLS = [
     {

@@ -119,7 +119,7 @@ async def _init_historical_events():
                 )
             )
             if not existing:
-                session.add(HistoricalEvent(**data, is_builtin=True, created_at=datetime.utcnow()))
+                session.add(HistoricalEvent(**data, is_builtin=True, created_at=datetime.now()))
         await session.commit()
 
 

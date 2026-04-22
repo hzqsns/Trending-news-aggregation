@@ -121,16 +121,6 @@ DEFAULT_RSS_FEEDS = [
         "category": "ai_industry",
     },
     {
-        "name": "36氪快讯",
-        "url": "https://36kr.com/feed-article-newsflashes",
-        "category": "ai_industry",
-    },
-    {
-        "name": "虎嗅",
-        "url": "https://www.huxiu.com/rss/0.xml",
-        "category": "ai_industry",
-    },
-    {
         "name": "TechCrunch AI",
         "url": "https://techcrunch.com/category/artificial-intelligence/feed/",
         "category": "ai_industry",
@@ -148,6 +138,59 @@ DEFAULT_RSS_FEEDS = [
     {
         "name": "MIT Technology Review",
         "url": "https://www.technologyreview.com/feed/",
+        "category": "ai_industry",
+    },
+    # --- AI 官方 Blog（一手消息，最权威）---
+    {
+        "name": "OpenAI Blog",
+        "url": "https://openai.com/news/rss.xml",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Google AI Blog",
+        "url": "https://blog.google/technology/ai/rss/",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Meta Engineering AI",
+        "url": "https://engineering.fb.com/category/ml-applications/feed/",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Google DeepMind",
+        "url": "https://deepmind.google/blog/rss.xml",
+        "category": "ai_industry",
+    },
+    # --- 国际科技媒体（深度报道）---
+    {
+        "name": "The Verge",
+        "url": "https://www.theverge.com/rss/index.xml",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Ars Technica",
+        "url": "https://feeds.arstechnica.com/arstechnica/index",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Wired",
+        "url": "https://www.wired.com/feed/rss",
+        "category": "ai_industry",
+    },
+    # --- 商业深度 / 风投 ---
+    {
+        "name": "Stratechery",
+        "url": "https://stratechery.com/feed/",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Semianalysis",
+        "url": "https://semianalysis.com/feed/",
+        "category": "ai_industry",
+    },
+    {
+        "name": "Crunchbase News",
+        "url": "https://news.crunchbase.com/feed/",
         "category": "ai_industry",
     },
 ]

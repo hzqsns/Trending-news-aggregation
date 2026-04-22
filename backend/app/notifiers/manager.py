@@ -100,7 +100,7 @@ async def push_news_digest():
         if not notifiers:
             return
 
-        since = datetime.utcnow() - timedelta(minutes=30)
+        since = datetime.now() - timedelta(minutes=30)
         result = await session.execute(
             select(Article)
             .where(Article.agent_key == "investment")

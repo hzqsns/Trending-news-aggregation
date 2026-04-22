@@ -19,43 +19,102 @@ logger = logging.getLogger(__name__)
 AGENT_KEY = "cs2_market"
 
 
-async def job_fetch_prices():
-    """每 5 分钟拉取热门饰品 Steam Market 价格"""
-    logger.info("⏰ CS2: fetching Steam Market prices")
-    try:
-        async with async_session() as session:
-            items = (await session.execute(
-                select(CS2Item).where(CS2Item.is_tracked == True).limit(50)  # noqa: E712
-            )).scalars().all()
+async def _fetch_via_csqaq() -> int:
+    """从 CSQAQ 拉取 BUFF + 悠悠真实市场价。返回保存条数；无 token 时返回 -1（表示应回退）。"""
+    from app.crawlers.csqaq import CSQAQCrawler
+    crawler = CSQAQCrawler()
+    rank_data = await crawler.fetch_rank_list(page_size=200, sort_field="市值_降序(BUFF)")
+    if not rank_data:
+        return -1  # 无数据/无 token 回退
 
-        if not items:
-            logger.info("CS2: no tracked items")
-            return
-
-        crawler = SteamMarketCrawler()
-        names = [item.market_hash_name for item in items]
-        results = await crawler.fetch_prices(names, batch_size=20)
-
+    # 建立 market_hash_name 映射
+    async with async_session() as session:
+        items = (await session.execute(
+            select(CS2Item).where(CS2Item.is_tracked == True)  # noqa: E712
+        )).scalars().all()
         name_to_item = {item.market_hash_name: item for item in items}
-        saved = 0
-        async with async_session() as session:
-            for result in results:
-                item = name_to_item.get(result["market_hash_name"])
-                if not item or result.get("price") is None:
-                    continue
-                snapshot = CS2PriceSnapshot(
-                    item_id=item.id,
-                    platform="steam",
-                    price=result["price"],
-                    currency="CNY",
-                    volume=result.get("volume", 0),
-                    listings=0,
-                )
-                session.add(snapshot)
-                saved += 1
-            await session.commit()
 
-        logger.info(f"CS2: saved {saved}/{len(results)} price snapshots")
+    saved = 0
+    async with async_session() as session:
+        for row in rank_data:
+            # csqaq 用 market_hash_name 字段
+            mhn = row.get("market_hash_name") or row.get("name")
+            item = name_to_item.get(mhn)
+            if not item:
+                continue
+
+            # BUFF 在售价（求购价 + 在售价取平均更贴近成交）
+            buff_sell = row.get("buff_sell_price") or row.get("sell_price")
+            buff_buy = row.get("buff_buy_price") or row.get("buy_price")
+            buff_vol = row.get("buff_volume_day") or row.get("volume") or 0
+
+            if buff_sell and buff_sell > 0:
+                session.add(CS2PriceSnapshot(
+                    item_id=item.id, platform="buff",
+                    price=float(buff_sell), currency="CNY",
+                    volume=int(buff_vol), listings=int(row.get("buff_sell_count", 0) or 0),
+                ))
+                saved += 1
+
+            # 悠悠有品价格
+            yyyp_sell = row.get("yyyp_sell_price")
+            if yyyp_sell and yyyp_sell > 0:
+                session.add(CS2PriceSnapshot(
+                    item_id=item.id, platform="youpin",
+                    price=float(yyyp_sell), currency="CNY",
+                    volume=int(row.get("yyyp_volume_day", 0) or 0),
+                    listings=int(row.get("yyyp_sell_count", 0) or 0),
+                ))
+                saved += 1
+
+        await session.commit()
+
+    logger.info(f"CS2 via CSQAQ: saved {saved} snapshots (BUFF + 悠悠有品)")
+    return saved
+
+
+async def _fetch_via_steam() -> int:
+    """备用：从 Steam Market 拉取（兼容旧逻辑，csqaq 不可用时使用）。"""
+    async with async_session() as session:
+        items = (await session.execute(
+            select(CS2Item).where(CS2Item.is_tracked == True).limit(50)  # noqa: E712
+        )).scalars().all()
+
+    if not items:
+        return 0
+
+    crawler = SteamMarketCrawler()
+    names = [item.market_hash_name for item in items]
+    results = await crawler.fetch_prices(names, batch_size=20)
+    name_to_item = {item.market_hash_name: item for item in items}
+
+    saved = 0
+    async with async_session() as session:
+        for result in results:
+            item = name_to_item.get(result["market_hash_name"])
+            if not item or result.get("price") is None:
+                continue
+            session.add(CS2PriceSnapshot(
+                item_id=item.id, platform="steam",
+                price=result["price"], currency="CNY",
+                volume=result.get("volume", 0), listings=0,
+            ))
+            saved += 1
+        await session.commit()
+
+    logger.info(f"CS2 via Steam: saved {saved}/{len(results)} snapshots")
+    return saved
+
+
+async def job_fetch_prices():
+    """优先 CSQAQ (BUFF + 悠悠)，无 token 时降级 Steam Market。"""
+    logger.info("⏰ CS2: fetching prices")
+    try:
+        saved = await _fetch_via_csqaq()
+        if saved < 0:
+            # csqaq 不可用，回退 Steam
+            logger.info("CS2: CSQAQ unavailable, falling back to Steam Market")
+            await _fetch_via_steam()
     except Exception as e:
         logger.error(f"CS2 fetch_prices error: {e}")
 
@@ -139,7 +198,7 @@ async def job_check_alerts():
 
                 if check_alert_hit(w.alert_direction, latest.price, w.target_price):
                     w.triggered = True
-                    w.triggered_at = datetime.utcnow()
+                    w.triggered_at = datetime.now()
                     triggered_count += 1
 
             if triggered_count:
@@ -152,7 +211,7 @@ async def job_check_alerts():
 async def job_cleanup_snapshots():
     """每日清理 90 天前的 snapshots"""
     try:
-        cutoff = datetime.utcnow() - timedelta(days=90)
+        cutoff = datetime.now() - timedelta(days=90)
         async with async_session() as session:
             await session.execute(
                 delete(CS2PriceSnapshot).where(CS2PriceSnapshot.snapshot_time < cutoff)
@@ -167,7 +226,7 @@ async def job_cs2_daily_report():
     """每日生成 CS2 饰品市场日报，写入 daily_reports 表"""
     logger.info("⏰ CS2: generating daily market report")
     try:
-        today = datetime.utcnow().date()
+        today = datetime.now().date()
         async with async_session() as session:
             existing = (await session.execute(
                 select(DailyReport).where(
@@ -181,7 +240,7 @@ async def job_cs2_daily_report():
                 return
 
             # 收集市场数据
-            since = datetime.utcnow() - timedelta(hours=24)
+            since = datetime.now() - timedelta(hours=24)
 
             # 涨幅/跌幅 Top 5
             items = (await session.execute(

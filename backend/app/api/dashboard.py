@@ -18,7 +18,7 @@ async def get_overview(
     session: AsyncSession = Depends(get_session),
     _=Depends(get_current_user),
 ):
-    now = datetime.utcnow()
+    now = datetime.now()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
 
     today_articles = (
@@ -75,7 +75,7 @@ async def sentiment_history(
     session: AsyncSession = Depends(get_session),
     _=Depends(get_current_user),
 ):
-    since = datetime.utcnow() - timedelta(days=days)
+    since = datetime.now() - timedelta(days=days)
     result = await session.execute(
         select(SentimentSnapshot)
         .where(SentimentSnapshot.snapshot_time >= since)
@@ -103,7 +103,7 @@ async def get_stats(
     ).all()
 
     hours_data = []
-    now = datetime.utcnow()
+    now = datetime.now()
     for i in range(23, -1, -1):
         start = now - timedelta(hours=i + 1)
         end = now - timedelta(hours=i)

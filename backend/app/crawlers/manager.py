@@ -11,6 +11,7 @@ from app.crawlers.github import GitHubTrendingCrawler
 from app.crawlers.hackernews import HackerNewsCrawler
 from app.crawlers.v2ex import V2exCrawler
 from app.crawlers.linux_do import LinuxDoCrawler
+from app.crawlers.ai_blogs import AIBlogsCrawler
 from app.sources.base import NewsItem
 
 if TYPE_CHECKING:
@@ -27,6 +28,7 @@ ALL_CRAWLERS: dict[str, CrawlerPlugin] = {
     "hackernews": HackerNewsCrawler(),
     "v2ex": V2exCrawler(),
     "linux_do": LinuxDoCrawler(),
+    "ai_blogs": AIBlogsCrawler(),
 }
 
 
