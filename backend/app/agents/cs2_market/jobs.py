@@ -19,6 +19,59 @@ logger = logging.getLogger(__name__)
 AGENT_KEY = "cs2_market"
 
 
+async def _fetch_via_buff() -> int:
+    """从 BUFF 拉取真实市场价（需 cookies）。返回保存条数；无 cookies 时返回 -1。"""
+    from app.crawlers.buff import BuffCrawler
+    crawler = BuffCrawler()
+    # 拉取 3 页 × 80 = 240 条最热门饰品
+    all_items = []
+    for page in (1, 2, 3):
+        rows = await crawler.fetch_market(page_num=page, page_size=80, sort_by="sell_num.desc")
+        if not rows:
+            if page == 1:
+                return -1  # 首页就失败，回退
+            break
+        all_items.extend(rows)
+
+    if not all_items:
+        return -1
+
+    # 建立 market_hash_name 映射
+    async with async_session() as session:
+        items = (await session.execute(
+            select(CS2Item).where(CS2Item.is_tracked == True)  # noqa: E712
+        )).scalars().all()
+        name_to_item = {item.market_hash_name: item for item in items}
+
+    saved = 0
+    async with async_session() as session:
+        for row in all_items:
+            mhn = row.get("market_hash_name")
+            item = name_to_item.get(mhn)
+            if not item:
+                continue
+            sell_price = row.get("sell_min_price")
+            if not sell_price:
+                continue
+            try:
+                price = float(sell_price)
+            except (TypeError, ValueError):
+                continue
+            session.add(CS2PriceSnapshot(
+                item_id=item.id,
+                platform="buff",
+                price=price,
+                currency="CNY",
+                volume=int(row.get("sell_num", 0) or 0),
+                listings=int(row.get("sell_num", 0) or 0),
+            ))
+            saved += 1
+        await session.commit()
+
+    logger.info(f"CS2 via BUFF: saved {saved} snapshots")
+    return saved
+
+
 async def _fetch_via_csqaq() -> int:
     """从 CSQAQ 拉取 BUFF + 悠悠真实市场价。返回保存条数；无 token 时返回 -1（表示应回退）。"""
     from app.crawlers.csqaq import CSQAQCrawler
@@ -107,14 +160,20 @@ async def _fetch_via_steam() -> int:
 
 
 async def job_fetch_prices():
-    """优先 CSQAQ (BUFF + 悠悠)，无 token 时降级 Steam Market。"""
+    """三级降级：BUFF cookies → CSQAQ token → Steam Market。"""
     logger.info("⏰ CS2: fetching prices")
     try:
+        saved = await _fetch_via_buff()
+        if saved >= 0:
+            return
+        logger.info("CS2: BUFF unavailable (no cookies), trying CSQAQ")
+
         saved = await _fetch_via_csqaq()
-        if saved < 0:
-            # csqaq 不可用，回退 Steam
-            logger.info("CS2: CSQAQ unavailable, falling back to Steam Market")
-            await _fetch_via_steam()
+        if saved >= 0:
+            return
+        logger.info("CS2: CSQAQ unavailable (no token), falling back to Steam")
+
+        await _fetch_via_steam()
     except Exception as e:
         logger.error(f"CS2 fetch_prices error: {e}")
 
