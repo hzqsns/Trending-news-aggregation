@@ -1,0 +1,128 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1777098703358,
+  "projectRoot": "/Users/heziqi/Project/Trending-news-aggregation",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "backend": {
+      "path": "backend",
+      "purpose": null,
+      "fileCount": 5,
+      "lastAccessed": 1777098703347,
+      "keyFiles": [
+        "CLAUDE.md",
+        "requirements.txt",
+        "test_twikit.py"
+      ]
+    },
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 2,
+      "lastAccessed": 1777098703348,
+      "keyFiles": [
+        "TECHNICAL_DESIGN.md",
+        "rollback-checklist.md"
+      ]
+    },
+    "frontend": {
+      "path": "frontend",
+      "purpose": null,
+      "fileCount": 13,
+      "lastAccessed": 1777098703348,
+      "keyFiles": [
+        "CLAUDE.md",
+        "README.md",
+        "eslint.config.js",
+        "index.html",
+        "package-lock.json"
+      ]
+    },
+    "openspec": {
+      "path": "openspec",
+      "purpose": null,
+      "fileCount": 0,
+      "lastAccessed": 1777098703348,
+      "keyFiles": []
+    },
+    "backend/app": {
+      "path": "backend/app",
+      "purpose": "Application code",
+      "fileCount": 6,
+      "lastAccessed": 1777098703348,
+      "keyFiles": [
+        "__init__.py",
+        "auth.py",
+        "config.py"
+      ]
+    },
+    "backend/data": {
+      "path": "backend/data",
+      "purpose": "Data files",
+      "fileCount": 4,
+      "lastAccessed": 1777098703349,
+      "keyFiles": [
+        "news_agent.db",
+        "news_agent.db.pre-constraint-fix.bak",
+        "news_agent.db.pre-cs2.bak"
+      ]
+    },
+    "backend/tests": {
+      "path": "backend/tests",
+      "purpose": "Test files",
+      "fileCount": 16,
+      "lastAccessed": 1777098703349,
+      "keyFiles": [
+        "__init__.py",
+        "baseline.py",
+        "baseline_snapshot.json"
+      ]
+    },
+    "frontend/dist": {
+      "path": "frontend/dist",
+      "purpose": "Distribution/build output",
+      "fileCount": 2,
+      "lastAccessed": 1777098703349,
+      "keyFiles": [
+        "index.html",
+        "vite.svg"
+      ]
+    },
+    "frontend/node_modules": {
+      "path": "frontend/node_modules",
+      "purpose": "Dependencies",
+      "fileCount": 3,
+      "lastAccessed": 1777098703350,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [],
+  "userDirectives": []
+}
